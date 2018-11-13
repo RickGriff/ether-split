@@ -95,7 +95,7 @@ describe('Deployment and user registration', function() {
     });
 
     it("reverts when unregistered accounts try to create a pending tx", async () => {
-      const agreement = await Agreement.new();
+
       try {
         await agreement.createPending(
           amount=900000,
@@ -111,48 +111,53 @@ describe('Deployment and user registration', function() {
     });
   });
 
-  describe("Confirm pending transactions", function() {
-    let agreement;
+  describe("Public Functions", function() {
     // TODO Implement more concise instantiation of registered users / pending txs for use in tests
-    beforeEach(async () => {
-      agreement = await Agreement.new();
-      await agreement.inviteFriend(secondAccount);
-      await agreement.registerUser2({from: secondAccount});
-      // create 2 pending transactions as user_1
-      await agreement.createPending(
-        amount=30,
-        split=false,
-        debtor=secondAccount,
-        description='I bought her sushi',
-      );
-      await agreement.createPending(
-        amount=50,
-        split=false,
-        debtor=firstAccount,
-        description='She bought me Nandos',
-      );
-      // create 2 pending transactions as user_2
-      await agreement.createPending(
-        amount=500,
-        split=false,
-        debtor=firstAccount,
-        description='I bought him a bike',
-        {from: secondAccount}  // user_2 creates tx
-      );
-      await agreement.createPending(
-        amount=1,
-        split=false,
-        debtor=firstAccount,
-        description='I bought him a newspaper',
-        {from: secondAccount}
-      );
-      });
+    beforeEach(
+      async () => {
+        agreement = await Agreement.new();
+        await agreement.inviteFriend(secondAccount);
+        await agreement.registerUser2({from: secondAccount});
+        // create 2 pending transactions as user_1
+        await agreement.createPending(
+          amount=30,
+          split=false,
+          debtor=secondAccount,
+          description='I bought her sushi',
+        );
+        await agreement.createPending(
+          amount=50,
+          split=false,
+          debtor=firstAccount,
+          description='She bought me Nandos',
+        );
+        // create 2 pending transactions as user_2
+        await agreement.createPending(
+          amount=500,
+          split=false,
+          debtor=firstAccount,
+          description='I bought him a bike',
+          {from: secondAccount}  // user_2 creates tx
+        );
+        await agreement.createPending(
+          amount=1,
+          split=false,
+          debtor=firstAccount,
+          description='I bought him a newspaper',
+          {from: secondAccount}
+        );
+      }
+    );
+
 
       it ("has pending transactions for each user", async () => {
-        assert.equal(await agreement.pendingTxs1Length.call().valueOf(), 2);
-        assert.equal(await agreement.pendingTxs2Length.call().valueOf(), 2);
+        let p1_length = await agreement.pendingTxs1Length.call();
+        let p2_length = await agreement.pendingTxs2Length.call();
+        assert.equal(p1_length.toNumber(), 2);
+        assert.equal(p2_length.toNumber(), 2);
       });
 
+    describe("Confirm pending transactions", function() {
       context("confirmAll As user_1", function() {
         it("deletes all user_1's pending transactions", async () => {
           await agreement.confirmAll();
@@ -350,7 +355,6 @@ describe('Deployment and user registration', function() {
         assert.equal(bal_after.toNumber(), bal_before.toNumber() + 30, ); // user_1 owed 50, user_2 owed 30.
       });
    });
-
    context("Trying to confirm txs from an unregistered account", function () {
      it("reverts when unregistered account tries to confirmAll", async () => {
        try {
@@ -371,7 +375,7 @@ describe('Deployment and user registration', function() {
      });
    });
   });
-
+});
   describe('Attempt to transact with contract with only 1 user registered', function() {
     beforeEach(async () => {
       agreement = await Agreement.new();
