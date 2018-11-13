@@ -88,7 +88,7 @@ contract Agreement {
         allPendingTx.length = 0; // delete all elements in pending tx array
         pendingTxs1Length = getPendingTxsLength1();  //update stored lengths of pending tx arrays
         pendingTxs2Length = getPendingTxsLength2();
-        int balanceChange  = 0;  
+        int balanceChange  = 0;
 
         for (uint i = 0; i < memAllPendingTx.length; i++) {
             confirmedTransactions.push(memAllPendingTx[i]);  // add Tx to confirmed array
@@ -120,6 +120,22 @@ contract Agreement {
 
         balance = balance + changeInBalance(transaction);
     }
+
+    function balanceHealthCheck () onlyUser public view returns (int _testBal, int _bal, bool) {
+        // calculates balance from total confirmed tx history.  Checks == to running balance.
+      
+        int testBalance = 0;
+        for (uint i = 0; i < confirmedTransactions.length; i++) {
+            testBalance = testBalance + changeInBalance(confirmedTransactions[i]);
+        }
+
+        if (testBalance != balance) {
+            return(testBalance, balance, false);
+        } else if (testBalance == balance) {
+            return(testBalance, balance, true);
+        }
+    }
+
   // ***** Helper and getter functions *****
   function changeInBalance(Tx _purchase) private view returns (int _change) {
         // returns the change to a balance caused by a purchase

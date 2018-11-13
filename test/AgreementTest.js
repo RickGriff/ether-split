@@ -375,7 +375,27 @@ describe('Deployment and user registration', function() {
      });
    });
   });
+
+//balance healthcheck
+describe.only('Balance Healthcheck', function() {
+
+  it("Verifies the running balance equals sum of all confirmed txs", async () => {
+
+    let start_balances = await agreement.balanceHealthCheck.call();
+
+    assert.equal(start_balances[0].toNumber(), start_balances[1].toNumber());
+    assert.isTrue(start_balances[2]);
+
+    await agreement.confirmAll();
+    await agreement.confirmAll({from: secondAccount});
+
+    let latest_balances = await agreement.balanceHealthCheck.call();
+    assert.equal(latest_balances[0].toNumber(), latest_balances[1].toNumber());
+    assert.isTrue(start_balances[2]);
+  });
 });
+});
+
   describe('Attempt to transact with contract with only 1 user registered', function() {
     beforeEach(async () => {
       agreement = await Agreement.new();
