@@ -30,6 +30,7 @@ contract Agreement {
     address debtor;
     string description;
     uint index;  // useful for tracking transactions, since they can move from a 'pending' array to 'confirmed' array.
+    uint timestamp;
   }
 
   //  ***** constructor and user registration functions *****
@@ -58,14 +59,16 @@ contract Agreement {
     // set the other user as confirmer
     newPendingTx.confirmer = getOtherUser(msg.sender);
 
+    uint timeNow = timeStamp();
+
     // set remaining attributes
     newPendingTx.amount = _amount;
     newPendingTx.split = _split;
     newPendingTx.creator = msg.sender;
     newPendingTx.debtor = _debtor;
-    newPendingTx.amount = _amount;
     newPendingTx.description = _description;
     newPendingTx.index = txCounter;
+    newPendingTx.timestamp = timeNow;
 
     // append new tx to the confirmer's pending tx array, and updated it's length
     if (newPendingTx.confirmer == user_1) {
@@ -123,7 +126,7 @@ contract Agreement {
 
     function balanceHealthCheck () onlyUser public view returns (int _testBal, int _bal, bool) {
         // calculates balance from total confirmed tx history.  Checks == to running balance.
-      
+
         int testBalance = 0;
         for (uint i = 0; i < confirmedTransactions.length; i++) {
             testBalance = testBalance + changeInBalance(confirmedTransactions[i]);
@@ -169,6 +172,10 @@ contract Agreement {
     } else if (_user == user_2) {
       return user_1;
     }
+  }
+
+  function timeStamp() private view returns (uint) {
+    return block.timestamp;
   }
 
 // Length getters for lists of confirmed & pending txs
