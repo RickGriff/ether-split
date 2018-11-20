@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "dependencies": {
+    "bignumber.js": "^8.0.1",
     "react": "^16.4.2",
     "react-dom": "^16.4.2",
     "react-scripts": "1.1.4",
@@ -16,7 +17,7 @@
     "eject": "react-scripts eject",
     "link-contracts": "run-script-os",
     "link-contracts:linux:darwin": "cd src && ln -s ../../build/contracts contracts",
-    "link-contracts:win32": "cd src && mklink \\D contracts ..\\..\\build\\contracts"
+    "link-contracts:win32": "cd src && mklink /D contracts ..\\..\\build\\contracts"
   },
   "devDependencies": {
     "run-script-os": "^1.0.3"
