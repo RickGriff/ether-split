@@ -1,19 +1,21 @@
-import React, { Component } from 'react'
-import ReactDOM from 'react-dom'
+import React from 'react'
 
 function ESNavbar(props) {
 
-  const {userName, balance } = props
+  const {userName, balance, sign, accountRegistered } = props
 
   return (
-    <div class="navbar">
+    <div className="navbar">
       <nav>
-        <div class="nav-wrapper light-blue lighten-3">
-          <a href="#" class="brand-logo right">EtherSplit</a>
-          <ul id="nav-mobile" class="left hide-on-med-and-down">
-            <li><a>User: {userName}</a></li>
-            <li><a>Balance: {balance}</a></li>
-          </ul>
+        <div className="nav-wrapper teal lighten-1">
+          <a href="#" className="brand-logo right">EtherSplit</a>
+
+          {accountRegistered() ?
+            <ul id="nav-mobile" className="left hide-on-med-and-down">
+              <li><a>User: {userName}</a></li>
+              <li><a>Balance: {sign} £{balance}</a></li>
+            </ul> : null
+          }
         </div>
       </nav>
     </div>

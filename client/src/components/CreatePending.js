@@ -1,5 +1,4 @@
 import React, { Component } from 'react';
-import ReactDOM from 'react-dom';
 import { Input } from 'react-materialize';
 
 class CreatePending extends Component {
@@ -14,8 +13,8 @@ class CreatePending extends Component {
     await this.props.createPending(e);
     this.setState({
       desc_content: '',
-      amount_content: ''
-    })
+      amount_content: '',
+    }, this.logState);
   }
 
   handleAmountChange = (e) =>{
@@ -32,22 +31,21 @@ class CreatePending extends Component {
 
   render (){
     return (
-      <div class="card-panel s7">
-      <form className="col s12" onSubmit={this.handleSubmit}>
+      <form onSubmit={this.handleSubmit}>
         <div className="row">
           <button className="btn waves-effect waves-light" type="submit">Create Pending TX</button>
-          <div className="col s2">
+          <div className="col s4">
             <label htmlFor="amount">
-              <Input type='number' placeholder='Amount' name='amount' value={this.state.amount_content} onChange={this.handleAmountChange} />
+              <Input type='number' placeholder='Amount (£)' name='amount' value={this.state.amount_content} onChange={this.handleAmountChange} />
             </label>
           </div>
         </div>
         <div className="row">
           <div className="col s6">
             <label htmlFor="debtor">
-              <Input type='select' name='debtor' label='Debtor' defaultValue='1'>
-                <option value={this.props.user_1}>{this.props.userName1}</option>
-                <option value={this.props.user_2}>{this.props.userName2}</option>
+              <Input type='select' name='debtor' label='Who owes who?' defaultValue='1'>
+                <option value={this.props.user_1}>{this.props.userName1} owes {this.props.userName2} </option>
+                <option value={this.props.user_2}>{this.props.userName2} owes {this.props.userName1}</option>
               </Input>
             </label>
           </div>
@@ -65,7 +63,6 @@ class CreatePending extends Component {
           </div>
         </div>
       </form>
-      </div>
 
     )
   }

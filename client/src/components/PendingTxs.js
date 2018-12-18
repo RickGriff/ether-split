@@ -1,5 +1,4 @@
-import React, { Component } from 'react'
-import ReactDOM from 'react-dom'
+import React from 'react'
 import {Collapsible, CollapsibleItem} from 'react-materialize'
 import Moment from 'react-moment';
 
@@ -26,16 +25,16 @@ function PendingTxs(props) {
 
   const PendingTxs = pending_txs.map(tx => {
     return (
-      <CollapsibleItem header= {`${tx.description}`} key= {tx.list_id}>
+      <CollapsibleItem header= {`${tx.description}`} key= {tx.list_id} icon={current_user === tx.debtor ? 'remove' : 'add'}>
       <div>#{tx.list_id} </div>
-      <div> { getName(tx.debtor) } owes { tx.amount } </div>
+      <div> { getName(tx.debtor) } owes £{ tx.amount } </div>
       <div> For: { tx.description } </div>
       <div> Debt added by { getName(tx.creator) } </div>
       <div> Date created: <Moment unix>{tx.timestamp}</Moment> </div>
       <div> Contract Transaction ID: { tx.id } </div>
       { showMine ?
         <div className="input-field col s3">
-          <button className="btn waves-effect waves-light" onClick={() => {props.confirmSingleTx(tx.list_id)}}>Confirm</button>
+          <button className="btn waves-effect waves-light" onClick={() => {confirmSingleTx(tx.list_id)}}>Confirm</button>
           </div> : ""
       }
       <br/>

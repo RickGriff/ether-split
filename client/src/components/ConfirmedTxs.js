@@ -1,16 +1,18 @@
-import React, { Component } from 'react'
-import ReactDOM from 'react-dom'
+import React from 'react'
 import {Collapsible, CollapsibleItem} from 'react-materialize'
 import Moment from 'react-moment';
 
 function ConfirmedTxs(props) {
-  const {confirmed_txs, getName, getDate } = props
+  const {confirmed_txs, getName, current_user} = props
   // map Confirmed Txs to JSX elements for rendering
+
+
   const confirmedTxs = confirmed_txs.map(tx => {
     return (
-      <CollapsibleItem header= {`${tx.description}`} key={tx.list_id}>
+
+      <CollapsibleItem header= {`${tx.description}`} key={tx.list_id} icon={current_user === tx.debtor ? 'remove' : 'add'}>
       <div>#{tx.list_id} </div>
-      <div> { getName(tx.debtor) } owes { tx.amount } </div>
+      <div> { getName(tx.debtor) } owes £{ tx.amount } </div>
       <div> For: { tx.description } </div>
       <div> Debt added by { getName(tx.creator) } </div>
       <div> Confirmed by { getName(tx.confirmer) } </div>
