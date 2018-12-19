@@ -6,6 +6,8 @@ contract Agreement {
   address public user_1;
   address public invited_friend;
   address public user_2;
+  string public user_1_name;
+  string public user_2_name;
 
   int public balance;  // the net balance of who owes who.  Positive if user_2 owes more, negative if user_1 owes more.
 
@@ -37,6 +39,17 @@ contract Agreement {
 
   constructor() public {
     user_1 = msg.sender;
+  }
+
+  function setName(string _name) onlyUser public {
+
+    if (msg.sender == user_1) {
+      require(bytes(user_1_name).length == 0, "You already set your name!");
+      user_1_name = _name;
+    } else if (msg.sender == user_2) {
+      require(bytes(user_2_name).length == 0, "You already set your name!");
+      user_2_name = _name;
+    }
   }
 
   function inviteFriend(address _friend) onlyUser1 onlyUser2NotRegistered public {

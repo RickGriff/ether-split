@@ -49,6 +49,65 @@ contract("Agreement", accounts => {
     });
   });
 
+  describe ("Sets user's name",  function () {
+    beforeEach(async () => {
+      agreement = await Agreement.new();
+      await agreement.inviteFriend(secondAccount);
+      await agreement.registerUser2({from: secondAccount});
+    });
+
+    describe ("As user 1", function () {
+      it("sets the name", async () => {
+        assert.equal(await agreement.user_1_name.call(), "")
+        await agreement.setName("Alice")
+        assert.equal(await agreement.user_1_name.call(), "Alice")
+      });
+
+      it("reverts on attempted name change", async () => {
+        await agreement.setName("Alice")
+        try {
+          // try to change name
+          await agreement.setName("Amanda")
+          assert.fail();
+        } catch (err) {
+          assert.include(err.message, 'revert');
+        }
+        assert.equal(await agreement.user_1_name.call(), "Alice")
+      });
+    });
+
+    describe ("As user 2", function () {
+      it("sets the name", async () => {
+        assert.equal(await agreement.user_2_name.call(), "")
+        await agreement.setName("Bob", {from: secondAccount})
+        assert.equal(await agreement.user_2_name.call(), "Bob")
+      });
+
+      it("reverts on attempted name change", async () => {
+        await agreement.setName("Bob", {from: secondAccount})
+        try {
+          await agreement.setName("Billy", {from: secondAccount})
+          assert.fail();
+        } catch (err) {
+          assert.include(err.message, 'revert');
+        }
+        assert.equal(await agreement.user_2_name.call(), "Bob")
+      });
+    });
+
+    describe ("As unregistered address", function () {
+      it("reverts when attempting to set a name", async () => {
+        try {
+          await agreement.setName("Chrystal", {from: thirdAccount})
+          assert.fail();
+        } catch (err) {
+          assert.include(err.message, 'revert');
+        }
+      });
+    });
+  });
+
+
   describe('Create pending transaction', function() {
     let agreement;
     let counter_before;

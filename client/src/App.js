@@ -44,6 +44,8 @@ class App extends Component {
       const current_user = accounts[0]
       const user_1 = await agreement.user_1({ from: accounts[0] });
       const user_2 = await agreement.user_2({ from: accounts[0] });
+      const user_1_name = await agreement.user_1_name({ from: accounts[0] });
+      const user_2_name = await agreement.user_2_name({ from: accounts[0] });
       const invited_friend = await agreement.invited_friend({ from: accounts[0] });
       const balance = (await agreement.balance( { from: accounts[0] })).toNumber();
       //Get pending transactions
@@ -53,7 +55,7 @@ class App extends Component {
       const confirmed_txs = await this.getConfirmedTxs(agreement);
 
       // Set web3, accounts contract, users and transactions to the state.
-      this.setState({ web3, accounts, current_user, user_1, user_2, invited_friend, user1_pending_txs, user2_pending_txs, confirmed_txs, balance, contract: agreement});
+      this.setState({ web3, accounts, current_user, user_1, user_2, user_1_name, user_2_name, invited_friend, user1_pending_txs, user2_pending_txs, confirmed_txs, balance,  contract: agreement});
 
       console.log('the state is:')
       console.log(this.state)
@@ -201,15 +203,19 @@ logState = () => {
   console.log(this.state)
 }
 
-setName = (e) => {
-  const { current_user, user_1, user_2 } = this.state;
+setName = async (e) => {
+  const { current_user, user_1, user_2, contract, accounts } = this.state;
   e.preventDefault();
   const name = e.target.name.value;
   console.log(name)
+  await contract.setName(name, {from: accounts[0]});
+  let recordedName;
   if (current_user === user_1) {
-    this.setState({user_1_name: name}, this.logState)
+    recordedName =  await contract.user_1_name();
+    this.setState({user_1_name: recordedName}, this.logState);
   } else if (current_user === user_2) {
-    this.setState({user_2_name: name}, this.logState)
+    recordedName =  await contract.user_2_name();
+    this.setState({user_2_name: recordedName}, this.logState);
   }
 }
 
