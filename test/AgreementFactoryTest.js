@@ -1,12 +1,194 @@
 
+const AgreementFactory = artifacts.require("AgreementFactory");
 const Agreement = artifacts.require("Agreement");
+const truffleAssert = require('truffle-assertions');
+
+contract("AgreementFactory", accounts => {
+  const [firstAccount, secondAccount, thirdAccount, fourthAccount] = accounts;
+
+  describe ('Deployment', function (){
+    it("registers the deploying account as creator", async () => {
+      const agreementFactory = await AgreementFactory.new();
+      let creator = await agreementFactory.creator.call();
+      assert.equal(creator, firstAccount)
+    });
+  });
+
+  describe('Agreement creation', function (){
+    before(async () => {
+      agreementFactory = await AgreementFactory.new();
+      //objects below are tx receipts -  not contract instances
+      agreementTx = await agreementFactory.createNewAgreement();
+      agreementTx2 = await agreementFactory.createNewAgreement({from: secondAccount});
+      agreementTx3 = await agreementFactory.createNewAgreement({from: secondAccount});
+    });
+
+    it('Creates agreements from the expected accounts', async () => {
+      truffleAssert.eventEmitted(agreementTx, 'AgreementCreated', (ev) =>{
+        return ev.from === firstAccount;
+      });
+      truffleAssert.eventEmitted(agreementTx2, 'AgreementCreated', (ev) =>{
+        return ev.from === secondAccount;
+      });
+      truffleAssert.eventEmitted(agreementTx3, 'AgreementCreated', (ev) =>{
+        return ev.from === secondAccount;
+      });
+    });
+
+    it('adds each agreement to allAgreements mapping', async () => {
+      truffleAssert.eventEmitted(agreementTx, 'AgreementAdded', (ev)=>{
+        return ev.inAllAgreementsList === true;
+      });
+      truffleAssert.eventEmitted(agreementTx2, 'AgreementAdded', (ev)=>{
+        return ev.inAllAgreementsList === true;
+      });
+      truffleAssert.eventEmitted(agreementTx3, 'AgreementAdded', (ev)=>{
+        return ev.inAllAgreementsList === true;
+      });
+    });
+
+    describe('getUsersAgreements', function (){
+      it("returns agreement created by firstAccount", async () => {
+        let agreements1 = await agreementFactory.getUsersAgreements(firstAccount)
+        assert.equal(agreements1.length, 1)
+        truffleAssert.eventEmitted(agreementTx, 'AgreementCreated', (ev) => {
+          return ev.agreementAddr === agreements1[0];
+        });
+      });
+
+      it("returns agreement created by secondAccount", async () => {
+        let agreements2 = await agreementFactory.getUsersAgreements(secondAccount)
+        assert.equal(agreements2.length, 2)
+        // check the addresses of both agreements created by secondAccount are in the returned array
+        truffleAssert.eventEmitted(agreementTx2, 'AgreementCreated', (ev) => {
+          return ev.agreementAddr === agreements2[0];
+        });
+        truffleAssert.eventEmitted(agreementTx3, 'AgreementCreated', (ev) => {
+          return ev.agreementAddr === agreements2[1];
+        });
+      });
+
+      it("returns empty array for account that didn't create an agreement", async () => {
+        let agreements3 = await agreementFactory.getUsersAgreements(thirdAccount)
+        assert.equal(agreements3.length, 0)
+      });
+    });
+
+    describe('getMyAgreements', function (){
+      describe('from firstAccount', function (){
+        it("returns firstAccount's agreement",  async () => {
+          let agreements1 = await agreementFactory.getMyAgreements()
+          assert.equal(agreements1.length, 1)
+          truffleAssert.eventEmitted(agreementTx, 'AgreementCreated', (ev) => {
+            return ev.agreementAddr === agreements1[0];
+          });
+        });
+      });
+
+      describe('from secondAccount', function (){
+        it("returns secondAccount's agreements",  async () => {
+          let agreements2 = await agreementFactory.getMyAgreements({from: secondAccount})
+          assert.equal(agreements2.length, 2)
+          // check the addresses of both agreements created by secondAccount are in the returned array
+          truffleAssert.eventEmitted(agreementTx2, 'AgreementCreated', (ev) => {
+            return ev.agreementAddr === agreements2[0];
+          });
+          truffleAssert.eventEmitted(agreementTx3, 'AgreementCreated', (ev) => {
+            return ev.agreementAddr === agreements2[1];
+          });
+        });
+      });
+
+      describe('from thirdAccount', function (){
+        it("returns empty array",  async () => {
+          let agreements3 = await agreementFactory.getMyAgreements({from: thirdAccount})
+          assert.equal(agreements3.length, 0)
+        });
+      });
+    });
+  });
+
+  describe('newRegisteredUser', function (){
+      beforeEach(async () => {
+      agreementFactory = await AgreementFactory.new();
+      agreementTx = await agreementFactory.createNewAgreement(); // the tx receipt of the new agreement
+      agreementAddr = agreementTx.logs[0].args[1];  // grab the created agreement address from event logs
+      agreementCreator = agreementTx.logs[0].args[0]; // grab the creator's addr from logs
+      agreement = await Agreement.at(agreementAddr);
+      // console.log(agreementAddr);
+      //  console.log(agreementCreator);
+      // console.log(agreement.methods);
+      // console.log(await agreementFactory.getUsersAgreements(firstAccount))
+      // console.log(await agreementFactory.getUsersAgreements(secondAccount))
+      // console.log(agreementFactory)
+      });
+
+    describe('secondAccount joins existing agreement1', function (){
+      it("adds agreement to user's list of agreements", async () => {
+        await agreement.inviteFriend(secondAccount)
+        assert.deepEqual(await agreementFactory.getUsersAgreements(secondAccount), [] )
+        await agreement.registerUser2({from: secondAccount})
+        assert.deepEqual(await agreementFactory.getUsersAgreements(secondAccount), [agreementAddr])
+       });
+    })
+
+    describe('secondAccount creates agreement2, and joins existing agreement1', function (){
+       it("adds agreement to user's list of agreements", async () => {
+         let agreementTx2 = await agreementFactory.createNewAgreement({from: secondAccount})
+         let agreement2Addr = agreementTx2.logs[0].args[1];
+         await agreement.inviteFriend(secondAccount);
+         assert.deepEqual(await agreementFactory.getUsersAgreements(secondAccount), [agreement2Addr] )
+         await agreement.registerUser2({from: secondAccount})
+         assert.deepEqual(await agreementFactory.getUsersAgreements(secondAccount), [agreement2Addr, agreementAddr])
+      });
+    });
+
+    it('reverts when called by a non-contract account', async () => {
+      try {
+        let factoryTx = await agreementFactory.newRegisteredUser(fourthAccount, {from: fourthAccount});  // uninivited account tries to register
+        assert.fail();
+      } catch (err) {
+        assert.include(err.message, 'revert');
+      }
+    });
+
+    // can we test funcs of other contracts in this one? if not, will need to
+    // separately test funcs in each contract test suite.
+    // it 'reverts when called by an orphan contract',  async () =>{
+    //   let orphan = await Agreement.new(fifthAccount);
+    //   await orphan.inviteFriend(sixthAccount);
+    //   await agreement.registerUser2({from: sixthAccount});
+
+    // it('reverts if calling contract is not in allAgreements', async () =>{})... hard to simulate
+    // it("adds calling contract to the user's list of contracts",  async () =>{})
+    // it("creates a new user => []contracts pair if user is not already in mapping", async () =>{})
+
+  });
+});
+
+
+
+  //   it('adds agreements to the right array in agreementsToUsers mapping', async () => {
+  //     assert.equal(agreementFactory.agreementsToUsers(firstAccount).length.toNumber(), 1)
+  //     assert.equal(agreementFactory.agreementsToUsers(secondAccount).length.toNumber(), 2)
+  //     assert.equal(agreementFactory.agreementsToUsers(firstAccount), [agreement.address()])
+  //     assert.equal(agreementFactory.agreementsToUsers(secondAccount), [agreement2.address(), agreement3.address()])
+  //   });
+  //   // it('returns all the creators list of agreements', async () => {})
+  // });
+
+
 
 contract("Agreement", accounts => {
   const [firstAccount, secondAccount, thirdAccount] = accounts;
 
   describe('Deployment and user registration', function() {
     beforeEach(async () => {
-      agreement = await Agreement.new();
+      //simulate agreement creation from firstAccount, via AgreementFactory
+      agreementFactory = await AgreementFactory.new();
+      agreementTx = await agreementFactory.createNewAgreement();
+      agreementAddr = agreementTx.logs[0].args[1];  // grab the created agreement address from event logs
+      agreement = await Agreement.at(agreementAddr);
       await agreement.inviteFriend(secondAccount);
     });
 
@@ -51,7 +233,11 @@ contract("Agreement", accounts => {
 
   describe ("Sets user's name",  function () {
     beforeEach(async () => {
-      agreement = await Agreement.new();
+      //simulate agreement creation from firstAccount, via AgreementFactory
+      agreementFactory = await AgreementFactory.new();
+      agreementTx = await agreementFactory.createNewAgreement();
+      agreementAddr = agreementTx.logs[0].args[1];  // grab the created agreement address from event logs
+      agreement = await Agreement.at(agreementAddr);
       await agreement.inviteFriend(secondAccount);
       await agreement.registerUser2({from: secondAccount});
     });
@@ -113,7 +299,11 @@ contract("Agreement", accounts => {
     let counter_before;
 
     beforeEach(async () => {
-      agreement = await Agreement.new();
+      //simulate agreement creation from firstAccount, via AgreementFactory
+      agreementFactory = await AgreementFactory.new();
+      agreementTx = await agreementFactory.createNewAgreement();
+      agreementAddr = agreementTx.logs[0].args[1];  // grab the created agreement address from event logs
+      agreement = await Agreement.at(agreementAddr);
       await agreement.inviteFriend(secondAccount);
       await agreement.registerUser2({from: secondAccount});
       counter_before = await agreement.txCounter.call();
@@ -205,7 +395,7 @@ contract("Agreement", accounts => {
         await agreement.createPending(amount=50, split=false, description='I bought him sushi');
         assert.fail();
       } catch (err) {
-        assert.include(err.message, 'Invalid number of arguments');
+        assert.include(err.message, 'Invalid number of parameters');
       }
     });
 
@@ -223,7 +413,11 @@ contract("Agreement", accounts => {
   describe("Confirming transactions", function() {
     beforeEach(
       async () => {
-        agreement = await Agreement.new();
+        //simulate agreement creation from firstAccount, via AgreementFactory
+        agreementFactory = await AgreementFactory.new();
+        agreementTx = await agreementFactory.createNewAgreement();
+        agreementAddr = agreementTx.logs[0].args[1];  // grab the created agreement address from event logs
+        agreement = await Agreement.at(agreementAddr);
         await agreement.inviteFriend(secondAccount);
         await agreement.registerUser2({from: secondAccount});
 
@@ -508,7 +702,11 @@ contract("Agreement", accounts => {
 
     describe('Attempt to transact with contract with only 1 user registered', function() {
       beforeEach(async () => {
-        agreement = await Agreement.new();
+        //simulate agreement creation from firstAccount, via AgreementFactory
+        agreementFactory = await AgreementFactory.new();
+        agreementTx = await agreementFactory.createNewAgreement();
+        agreementAddr = agreementTx.logs[0].args[1];
+        agreement = await Agreement.at(agreementAddr);
       });
 
       it("reverts when user_1 tries to createPending",  async () => {
