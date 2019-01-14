@@ -18,3 +18,16 @@ body {
 .brand-logo {
   margin-right: 60px
 }
+
+.factory-agreement-top {
+  padding-top: 20px;
+}
+
+.factory-agreement-bottom {
+  padding-bottom: 10px;
+}
+
+.reg-user2 {
+  margin-top: 35px;
+  margin-bottom: 25px;
+}

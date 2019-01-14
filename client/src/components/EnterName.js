@@ -13,7 +13,7 @@ function EnterName(props) {
           </div>
           <div className="valign-wrapper col s6">
             <Input placeholder="Name" name="name" s={12} />
-            <Button class ="input-field" waves='light'>Submit</Button>
+            <Button className ="input-field" waves='light'>Submit</Button>
           </div>
       </form>
     </div>

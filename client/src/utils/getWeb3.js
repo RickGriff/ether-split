@@ -1,9 +1,12 @@
 import Web3 from "web3";
 
+//NOTE:  EventListener removed (line 8) - was causing pages to freeze - the getWeb3 promise never resolved,
+// when pages were served by the React router.
+//See: https://stackoverflow.com/questions/53366103/await-keeps-on-waiting-react-react-router
 const getWeb3 = () =>
   new Promise((resolve, reject) => {
     // Wait for loading completion to avoid race conditions with web3 injection timing.
-    window.addEventListener("load", () => {
+    //window.addEventListener("load", () => {
       let web3 = window.web3;
 
       // Checking if Web3 has been injected by the browser (Mist/MetaMask).
@@ -24,7 +27,7 @@ const getWeb3 = () =>
         console.log("No web3 instance injected, using Local web3.");
         resolve(web3);
       }
-    });
+    //});
   });
 
 export default getWeb3;

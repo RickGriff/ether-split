@@ -62,7 +62,6 @@ contract Agreement {
   string public user_1_name;
   string public user_2_name;
 
-
   int public balance;  // the net balance of who owes who.  Positive if user_2 owes more, negative if user_1 owes more.
 
   uint public txCounter; // counts the number of purchases created.
@@ -185,7 +184,7 @@ contract Agreement {
       delete allPendingTx[_txIndex];
       allPendingTx[_txIndex] = allPendingTx[len - 1];   // copy last element to empty slot
       delete allPendingTx[len - 1];   // delete last element
-      allPendingTx.length--;  // decrement size of array by 1
+      allPendingTx.length--;  // decrease array size by one to remove empty slot
 
       // append Tx to confirmed transactions
       confirmedTransactions.push(transaction);
