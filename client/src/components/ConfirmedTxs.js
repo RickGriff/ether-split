@@ -3,22 +3,34 @@ import {Collapsible, CollapsibleItem} from 'react-materialize'
 import Moment from 'react-moment';
 
 function ConfirmedTxs(props) {
-  const {confirmed_txs, getName, current_user} = props
+  const {confirmed_txs, getName, current_user, txTraits} = props
   // map Confirmed Txs to JSX elements for rendering
 
+  const orderedTxs = confirmed_txs.sort((a, b) => (b.timestamp - a.timestamp))
 
-  const confirmedTxs = confirmed_txs.map(tx => {
+  const ConfirmedTxs = orderedTxs.map(tx => {
     return (
-
-      <CollapsibleItem header= {`${tx.description}`} key={tx.list_id} icon={current_user === tx.debtor ? 'remove' : 'add'}>
-      <div>#{tx.list_id} </div>
-      <div> { getName(tx.debtor) } owes £{ tx.amount } </div>
-      <div> For: { tx.description } </div>
-      <div> Debt added by { getName(tx.creator) } </div>
-      <div> Confirmed by { getName(tx.confirmer) } </div>
-      <div> Contract Transaction ID: { tx.id } </div>
-      <div> Date created: <Moment unix>{tx.timestamp}</Moment> </div>
-      </CollapsibleItem>
+      <li>
+        <div className = "collapsible-header">
+          <i class="material-icons">
+            {current_user === tx.debtor ? 'remove' : 'add'}
+          </i>
+          {tx.description}
+          <span className="badge">
+            <span className={txTraits(tx).color}>{txTraits(tx).sign}£{tx.amount}</span>
+          </span>
+        </div>
+        <div className = "collapsible-body">
+          <div>#{tx.list_id} </div>
+          <div> { getName(tx.debtor) } owes £{ tx.amount } </div>
+          <div> For: { tx.description } </div>
+          <div> Debt added by { getName(tx.creator) } </div>
+          <div> Confirmed by { getName(tx.confirmer) } </div>
+          <div> Date created: <Moment unix>{tx.timestamp}</Moment> </div>
+          <div> Contract Transaction ID: { tx.id } </div>
+          <br/>
+        </div>
+      </li>
     )
   });
 
@@ -27,10 +39,47 @@ function ConfirmedTxs(props) {
     <h4>Confirmed Transactions</h4>
     <br/>
     <Collapsible popout>
-    { confirmedTxs }
+    { ConfirmedTxs }
     </Collapsible>
     </div>
   )
 }
 
 export default ConfirmedTxs;
+
+
+// Materialize HTML
+
+// <li>
+//   <div className = "collapsible-header">
+//     <i class="material-icons">
+//       {current_user === tx.debtor ? 'remove' : 'add'}
+//     </i>
+//     {tx.description}
+//     <span className="badge">{tx.amount}</span>
+//   </div>
+//   <div className = "collapsible-body">
+//     <div>#{tx.list_id} </div>
+//     <div> { getName(tx.debtor) } owes £{ tx.amount } </div>
+//     <div> For: { tx.description } </div>
+//     <div> Debt added by { getName(tx.creator) } </div>
+//     <div> Date created: <Moment unix>{tx.timestamp}</Moment> </div>
+//     <div> Contract Transaction ID: { tx.id } </div>
+//
+//     <br/>
+//     <br/>
+//   </div>
+// </li>
+//
+
+// React MAterialize Component
+
+// <CollapsibleItem header= {`${tx.description}`} key={tx.list_id} icon={current_user === tx.debtor ? 'remove' : 'add'}>
+// <div>#{tx.list_id} </div>
+// <div> { getName(tx.debtor) } owes £{ tx.amount } </div>
+// <div> For: { tx.description } </div>
+// <div> Debt added by { getName(tx.creator) } </div>
+// <div> Confirmed by { getName(tx.confirmer) } </div>
+// <div> Contract Transaction ID: { tx.id } </div>
+// <div> Date created: <Moment unix>{tx.timestamp}</Moment> </div>
+// </CollapsibleItem>

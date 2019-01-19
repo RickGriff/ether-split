@@ -6,8 +6,11 @@ contract AgreementFactory {
 
   mapping(address => bool) public allAgreements;
 
-  //map users to lists of agreements they're part of
+  // map users to lists of agreements they're part of
   mapping(address => address[]) public agreementsToUser;
+
+  // map users to agreements they've been invited to
+  mapping(address => address[]) public invitesToUser;
 
   event AgreementCreated (address from, address agreementAddr);
   event AgreementAdded (address agreementAddr, bool inAllAgreementsList);
@@ -33,14 +36,26 @@ contract AgreementFactory {
     return( agreementsToUser[msg.sender] );
   }
 
+  function getMyInvites() public view returns (address[] memory ) {
+    return( invitesToUser[msg.sender] );
+  }
+
   function newRegisteredUser(address _user) public _onlyChildContract {
-    agreementsToUser[_user].push(msg.sender); //add snding contract's address to user's list of contracts
+    agreementsToUser[_user].push(msg.sender); //add sending contract's address to user's list of agreements
+  }
+
+  function newInvite(address _friend) public _onlyChildContract {
+    invitesToUser[_friend].push(msg.sender); //add sending contract's address to user's list of invites
   }
 
   // Length getters and modifiers
 
   function getMyAgreementsCount() public view returns(uint myAgreementsCount) {
     return agreementsToUser[msg.sender].length;
+  }
+
+  function getMyInvitesCount() public view returns(uint myAgreementsCount) {
+    return invitesToUser[msg.sender].length;
   }
 
   function getUsersAgreementsCount(address _user) public view returns(uint usersAgreementsCount) {
@@ -112,7 +127,10 @@ contract Agreement {
     function inviteFriend(address _friend) onlyUser1 onlyUser2NotRegistered public {
       //user_1 can re-set invited_friend address, until a second user registers.  After that, this func reverts.
       require(_friend != msg.sender, 'You cant invite yourself!');
+      require(invited_friend == address(0), 'You have already invited someone!');
       invited_friend = _friend;
+      AgreementFactory factory = AgreementFactory(parentFactory);
+      factory.newInvite(_friend);
     }
 
     function registerUser2() onlyInvitedFriend onlyUser2NotRegistered public {

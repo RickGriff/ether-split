@@ -14,7 +14,7 @@ contract("AgreementFactory", accounts => {
     });
   });
 
-  describe('Agreement creation', function (){
+  describe('Agreement creation and getters', function (){
     before(async () => {
       agreementFactory = await AgreementFactory.new();
       //objects below are tx receipts -  not contract instances
@@ -109,19 +109,13 @@ contract("AgreementFactory", accounts => {
   });
 
   describe('newRegisteredUser', function (){
-      beforeEach(async () => {
+    beforeEach(async () => {
       agreementFactory = await AgreementFactory.new();
       agreementTx = await agreementFactory.createNewAgreement(); // the tx receipt of the new agreement
       agreementAddr = agreementTx.logs[0].args[1];  // grab the created agreement address from event logs
       agreementCreator = agreementTx.logs[0].args[0]; // grab the creator's addr from logs
       agreement = await Agreement.at(agreementAddr);
-      // console.log(agreementAddr);
-      //  console.log(agreementCreator);
-      // console.log(agreement.methods);
-      // console.log(await agreementFactory.getUsersAgreements(firstAccount))
-      // console.log(await agreementFactory.getUsersAgreements(secondAccount))
-      // console.log(agreementFactory)
-      });
+    });
 
     describe('secondAccount joins existing agreement1', function (){
       it("adds agreement to user's list of agreements", async () => {
@@ -151,33 +145,35 @@ contract("AgreementFactory", accounts => {
         assert.include(err.message, 'revert');
       }
     });
+  });
 
-    // can we test funcs of other contracts in this one? if not, will need to
-    // separately test funcs in each contract test suite.
-    // it 'reverts when called by an orphan contract',  async () =>{
-    //   let orphan = await Agreement.new(fifthAccount);
-    //   await orphan.inviteFriend(sixthAccount);
-    //   await agreement.registerUser2({from: sixthAccount});
+  describe('newInvite', function (){
+    beforeEach(async () => {
+      agreementFactory = await AgreementFactory.new();
+      agreementTx = await agreementFactory.createNewAgreement(); // the tx receipt of the new agreement
+      agreementAddr = agreementTx.logs[0].args[1];  // grab the created agreement address from event logs
+      agreementCreator = agreementTx.logs[0].args[0]; // grab the creator's addr from logs
+      agreement = await Agreement.at(agreementAddr);
+    });
 
-    // it('reverts if calling contract is not in allAgreements', async () =>{})... hard to simulate
-    // it("adds calling contract to the user's list of contracts",  async () =>{})
-    // it("creates a new user => []contracts pair if user is not already in mapping", async () =>{})
+    it('reverts when called by a non-contract account', async () => {
+      try {
+        let factoryTx = await agreementFactory.newInvite(fourthAccount, {from: fourthAccount});  // uninivited account tries to register
+        assert.fail();
+      } catch (err) {
+        assert.include(err.message, 'revert');
+      }
+    });
 
+    describe('creator invites secondAccount', function (){
+      it("adds agreement to user's list of invites", async () => {
+        assert.deepEqual(await agreementFactory.getMyInvites({from: secondAccount}), [] )
+        await agreement.inviteFriend(secondAccount) // this func in turn calls the parent factory's newInvite() func
+        assert.deepEqual(await agreementFactory.getMyInvites({from: secondAccount}), [agreementAddr])
+      });
+    });
   });
 });
-
-
-
-  //   it('adds agreements to the right array in agreementsToUsers mapping', async () => {
-  //     assert.equal(agreementFactory.agreementsToUsers(firstAccount).length.toNumber(), 1)
-  //     assert.equal(agreementFactory.agreementsToUsers(secondAccount).length.toNumber(), 2)
-  //     assert.equal(agreementFactory.agreementsToUsers(firstAccount), [agreement.address()])
-  //     assert.equal(agreementFactory.agreementsToUsers(secondAccount), [agreement2.address(), agreement3.address()])
-  //   });
-  //   // it('returns all the creators list of agreements', async () => {})
-  // });
-
-
 
 contract("Agreement", accounts => {
   const [firstAccount, secondAccount, thirdAccount] = accounts;
@@ -202,6 +198,16 @@ contract("Agreement", accounts => {
       assert.equal(invited_friend, secondAccount);
     });
 
+    it("does not allow invited_friend to be changed", async () => {
+      let invited_friend = await agreement.invited_friend.call()
+      try {
+        await agreement.inviteFriend(thirdAccount);  // creator tries to invite a different friend
+        assert.fail();
+      } catch (err) {
+        assert.include(err.message, 'revert');
+      }
+    });
+
     it("registers invited friend as user_2", async () => {
       await agreement.registerUser2({from: secondAccount});  // register as user_2, from secondAccount
       let invited_friend = await agreement.invited_friend.call()
@@ -220,15 +226,19 @@ contract("Agreement", accounts => {
       }
     });
 
+    /* redundant test, since invited_friend can't be changed:-
+
     it("does not allow more invites after 2 users are registered", async () => {
       await agreement.registerUser2({from: secondAccount});
       try {
-        await agreement.inviteFriend(thirdAccount, {from: firstAccount});  // uninivited account tries to register
+        await agreement.inviteFriend(thirdAccount, {from: firstAccount});
         assert.fail();
       } catch (err) {
         assert.include(err.message, 'revert');
       }
     });
+
+    */
   });
 
   describe ("Sets user's name",  function () {

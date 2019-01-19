@@ -63,7 +63,6 @@ class CreatePending extends Component {
           </div>
         </div>
       </form>
-
     )
   }
 }

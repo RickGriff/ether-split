@@ -9,6 +9,7 @@ import CreatePending from './CreatePending.js'
 import EnterName from './EnterName.js'
 import InviteFriend from './InviteFriend.js'
 import RegisterUser2 from './RegisterUser2.js'
+import AgreementBody from './AgreementBody.js'
 import { Input, Collapsible, CollapsibleItem, Button } from 'react-materialize';
 
 //import "./App.css";
@@ -164,22 +165,39 @@ cleanTx = (tx) => {
   return clean_tx
 }
 
+trimError = (error) => {
+  if (error.message.includes('Invalid "from" address')) {
+    return  'Invalid "From" address. You may only create transactions from an address registered on this agreement.'
+  } else {
+    return error.message
+  }
+}
+
 createPending = async (e) => {
   e.preventDefault();
   const { accounts, contract } = this.state;
+  // grab the form data
   const amount = e.target.amount.value;
   const debtor = e.target.debtor.value;
   const split = e.target.split.checked;
   const description = e.target.description.value;
 
-  if (amount && description) {
+  if (!(amount && description)) {
+      window.Materialize.toast('Please enter an amount and description!', 5000)
+      return null
+    }
+
+  try {
     await contract.createPending(amount, split, debtor, description, {from: accounts[0]})
-    const updatedPending = await this.getAllPendingTxs(contract)
-    await this.setState({user1_pending_txs: updatedPending[0], user2_pending_txs: updatedPending[1] });
-    window.Materialize.toast('Pending Transaction created.', 5000)
-  } else {
-    window.Materialize.toast('Please enter an amount and description!', 5000)
   }
+  catch(error) { // return the error message
+    window.Materialize.toast(this.trimError(error), 6000)
+    return null
+  }
+
+  const updatedPending = await this.getAllPendingTxs(contract)
+  await this.setState({user1_pending_txs: updatedPending[0], user2_pending_txs: updatedPending[1] });
+  window.Materialize.toast('Pending Transaction created.', 4000)
 }
 
 getName = (address) => {
@@ -216,6 +234,17 @@ setName = async (e) => {
     recordedName =  await contract.user_2_name();
     this.setState({user_2_name: recordedName}, this.logState);
   }
+}
+
+txTraits = (tx) => {
+  // return the sign and color for a tx, based on whether current_user is the debtor
+  let sign = "";
+  let color = "";
+  if (this.state.current_user === tx.debtor) {
+    sign = "- "
+    color = "red-text text-accent-4"
+  }
+  return { color, sign }
 }
 
 userBal = () => {
@@ -265,12 +294,16 @@ accountRegistered = () => {
   return current_user === user_1 || current_user === user_2;
 }
 
-noInvitedFriend = () => {
-  return this.isEmptyAddress(this.state.invited_friend);
-}
-
 isUser1 = () => {
   return this.state.current_user === this.state.user_1
+}
+
+hasNoInvitedFriend = () => {
+  return this.isEmptyAddress(this.state.invited_friend)
+}
+
+hasTwoUsers = () => {
+  return !this.isEmptyAddress(this.state.user_1) && !this.isEmptyAddress(this.state.user_2)
 }
 
 isInvitedFriend = () => {
@@ -295,6 +328,12 @@ render() {
         </div>
       </div>
       <h4>Please sign in to Metamask and refresh to access your agreement!</h4>
+    </div>
+  }
+
+  if (!this.accountRegistered() && !this.isInvitedFriend()) {
+    return <div className="container">
+      <h4>Sorry, your Eth account address has not been registered on or invited to this agreement yet.</h4>
     </div>
   }
 
@@ -332,78 +371,41 @@ render() {
           </div>
           <br/>
           {/* Invite Friend form, visible to user_1 when no friend invited yet */}
-          {this.isUser1() ?
+          {this.isUser1() && this.hasNoInvitedFriend() ?
             <InviteFriend inviteFriend={this.inviteFriend} /> : null
            }
           {/* Register User2 button, visible to the invited friend */}
           {this.isInvitedFriend() && this.isEmptyAddress(this.state.user_2) ?
             <RegisterUser2 registerUser2 = {this.registerUser2} user1Name = {this.state.user_1_name} /> : null
           }
-          { this.accountRegistered() ?
-            // List the Balance, Tx form and Tx data only if account is registered
             <div>
-            
-            <div className ="row">
-              <div className=" col s7">
-                <Collapsible popout>
-                  <CollapsibleItem header= 'Create New Transaction' className='create-pending truncate'>
-                    <CreatePending createPending={this.createPending}
-                      user_1={this.state.user_1}
-                      user_2={this.state.user_2}
-                      userName1={this.getName(this.state.user_1)}
-                      userName2={this.getName(this.state.user_2)}
-                    />
-                  </CollapsibleItem>
-                </Collapsible>
-              </div>
-              <div className=" col s5">
-                <h3 className ="hide-on-small-only">Balance: <span className={this.userBal().color}>{this.userBal().sign}£{this.absBalance()}</span></h3>
-              </div>
+            <div className={this.hasTwoUsers() && !this.hasNoInvitedFriend() ? "hidden" : null }>
+              <h3> Awaiting registration from the invited address. </h3>
             </div>
-          {/*List current user's Pending Txs*/}
-          <div className="row">
-            <div className=" col s6">
-              <h4>My Pending Tx</h4>
-              { this.userPendingTxs().length > 0 ?
-                <div className="input-field">
-                  <button className="btn waves-effect waves-light" onClick={this.confirmAll}>Confirm All</button>
-                </div> : null
-              }
-              <br/>
-              <PendingTxs
-                showMine={true}
-                current_user = {this.state.current_user}
-                user_1={this.state.user_1} user_2={this.state.user_2}
-                user1_pending_txs={this.state.user1_pending_txs}
-                user2_pending_txs={this.state.user2_pending_txs}
-                confirmSingleTx={this.confirmSingleTx}
-                getName = {this.getName} />
-              </div>
-              <div className="col s6">
-                <h4>Their Pending Tx</h4>
-                <br/>
-                <br/>
-                <br/>
-                <PendingTxs
-                  showMine={false}
-                  current_user = {this.state.current_user}
-                  user_1={this.state.user_1} user_2={this.state.user_2}
-                  user1_pending_txs={this.state.user1_pending_txs}
-                  user2_pending_txs={this.state.user2_pending_txs}
-                  confirmSingleTx={this.confirmSingleTx}
-                  getName = {this.getName} />
-              </div>
-            </div>
-            <br/>
-            <br/>
-            {/* List Confirmed Txs */}
-            <div className="row">
-              <ConfirmedTxs confirmed_txs={this.state.confirmed_txs}
-                getName={this.getName}
-                current_user = {this.state.current_user}/>
-            </div>
-            </div>  : null
+          {/* Render SingleAgreementBody if account is registered for this agreement */}
+          { this.accountRegistered() ?
+            <AgreementBody
+              accountRegistered = {this.accountRegistered}
+              hasTwoUsers = {this.hasTwoUsers}
+              createPending = {this.createPending}
+              getName = {this.getName}
+              userBal = {this.userBal}
+              txTraits = {this.txTraits}
+              absBalance = {this.absBalance}
+              userPendingTxs = {this.userPendingTxs}
+              confirmSingleTx = {this.confirmSingleTx}
+              confirmAll = {this.confirmAll}
+              current_user = {this.state.current_user}
+              user_1 = {this.state.user_1}
+              user_2 = {this.state.user_2}
+              user_1_name = {this.state.user_1_name}
+              user_2_name = {this.state.user_2_name}
+              user1_pending_txs = {this.state.user1_pending_txs}
+              user2_pending_txs = {this.state.user2_pending_txs}
+              confirmed_txs = {this.state.confirmed_txs}
+            /> : null
           }
+          </div>
           </div>
         </div>
       </div>
@@ -411,3 +413,69 @@ render() {
     }
   }
 export default SingleAgreement;
+
+
+
+// Extracted SingleAgreement Body:
+
+// <div className={this.hasTwoUsers() ? null : "hidden"}>
+//   <div className ="row">
+//     <div className=" col s7">
+//       <Collapsible popout>
+//         <CollapsibleItem header= 'Create New Transaction' className='create-pending truncate'>
+//           <CreatePending createPending={this.createPending}
+//             user_1={this.state.user_1}
+//             user_2={this.state.user_2}
+//             userName1={this.getName(this.state.user_1)}
+//             userName2={this.getName(this.state.user_2)}
+//           />
+//         </CollapsibleItem>
+//       </Collapsible>
+//     </div>
+//     <div className=" col s5">
+//       <h3 className ="hide-on-small-only">Balance: <span className={this.userBal().color}>{this.userBal().sign}£{this.absBalance()}</span></h3>
+//     </div>
+//   </div>
+//   {/*List current user's Pending Txs*/}
+//   <div className="row">
+//     <div className=" col s6">
+//       <h4>My Pending Tx</h4>
+//       { this.userPendingTxs().length > 0 ?
+//         <div className="input-field">
+//           <button className="btn waves-effect waves-light" onClick={this.confirmAll}>Confirm All</button>
+//         </div> : null
+//       }
+//       <br/>
+//       <PendingTxs
+//         showMine={true}
+//         current_user = {this.state.current_user}
+//         user_1={this.state.user_1} user_2={this.state.user_2}
+//         user1_pending_txs={this.state.user1_pending_txs}
+//         user2_pending_txs={this.state.user2_pending_txs}
+//         confirmSingleTx={this.confirmSingleTx}
+//         getName = {this.getName} />
+//       </div>
+//       <div className="col s6">
+//         <h4>Their Pending Tx</h4>
+//         <br/>
+//         <br/>
+//         <br/>
+//         <PendingTxs
+//           showMine={false}
+//           current_user = {this.state.current_user}
+//           user_1={this.state.user_1} user_2={this.state.user_2}
+//           user1_pending_txs={this.state.user1_pending_txs}
+//           user2_pending_txs={this.state.user2_pending_txs}
+//           confirmSingleTx={this.confirmSingleTx}
+//           getName = {this.getName} />
+//         </div>
+//       </div>
+//       <br/>
+//       <br/>
+//       {/* List Confirmed Txs */}
+//       <div className="row">
+//         <ConfirmedTxs confirmed_txs={this.state.confirmed_txs}
+//           getName={this.getName}
+//           current_user = {this.state.current_user}/>
+//         </div>
+//       </div>

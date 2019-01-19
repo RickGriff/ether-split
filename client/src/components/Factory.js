@@ -22,6 +22,8 @@ class Factory extends Component {
     accounts: null,
     factory: null,
     currentAccount: null,
+    myInvites: [],
+    myInvitesData: {},
     myAgreements: [],
     myAgreementsData: {}
   };
@@ -39,13 +41,17 @@ class Factory extends Component {
       Contract.setProvider(web3.currentProvider);
       const factory = await Contract.deployed();
       this.logState();
+      const myInvites = await factory.getMyInvites({from: accounts[0]});
       const myAgreements = await factory.getMyAgreements({from: accounts[0]});
       console.log("myAgreements are:")
       console.log(myAgreements)
+      console.log("myInvites are:")
+      console.log(myInvites)
       const myAgreementsData = await this.getAllAgreementsData(web3, myAgreements, {from: accounts[0]});
+      const myInvitesData = await this.getAllAgreementsData(web3, myInvites, {from: accounts[0]});
       console.log("myAgreementsData before set as State is:")
       console.log(myAgreementsData)
-     this.setState({ web3, accounts, currentAccount, factory, myAgreements, myAgreementsData }, this.logState)
+     this.setState({ web3, accounts, currentAccount, factory, myInvites, myAgreements, myAgreementsData, myInvitesData }, this.logState)
     } catch (error) {
       // Catch any errors for above operations
       alert(
@@ -100,9 +106,7 @@ class Factory extends Component {
     this.props.history.push(path);
   }
 
-  displayCreator = (agreement) => {
-    const creator = this.state.myAgreementsData[agreement]["creator"]
-    const user_1_name = this.state.myAgreementsData[agreement]["user_1_name"]
+  displayCreator = (creator, user_1_name) => {
     if (creator === this.state.currentAccount) {
       return "Created by You"
     } else if (user_1_name === "") {
@@ -118,7 +122,6 @@ class Factory extends Component {
   }
 
   render() {
-
     if (!this.state.currentAccount) {
       return <div className="container">
         <div className="progress">
@@ -129,10 +132,13 @@ class Factory extends Component {
       </div>
     }
 
+    // build the array of user's JSX agreements
     const myAgreementsData = this.state.myAgreementsData;
-    let MyAgreements =[]
-    // build the array of agreements
+    const MyAgreements = []
     for (const addr in myAgreementsData) {
+      const creator = this.state.myAgreementsData[addr]["creator"]
+      const user_1_name = this.state.myAgreementsData[addr]["user_1_name"]
+
       MyAgreements.push(
       <div className="card">
         <div className="row factory-agreement-top">
@@ -140,14 +146,47 @@ class Factory extends Component {
             <p>Agreement contract address:</p>
             <p>{addr}</p>
           </div>
-          <div className ="col s2">
+          <div className ="col s3">
             <h5 className ="truncate">Balance: {myAgreementsData[addr]["balance"]}</h5>
           </div>
 
         </div>
         <div className ="row factory-agreement-bottom">
           <div className ="col s7 truncate">
-            {this.displayCreator(addr)}
+            {this.displayCreator(creator, user_1_name)}
+          </div>
+          <div className ="input-field col s3">
+              <button className="btn waves-effect waves-light" onClick={() => this.routeChange(addr)}> View Agreement</button>
+          </div>
+        </div>
+      </div>
+      )
+    }
+
+    // build the array of user's JSX invites
+    const myInvitesData = this.state.myInvitesData;
+    const MyInvites = []
+    for (const addr in myInvitesData) {
+      const creator = this.state.myInvitesData[addr]["creator"]
+      const user_1_name = this.state.myInvitesData[addr]["user_1_name"]
+
+      // If agreement already in myAgreements -
+      // if user has already registered - don't render it in the invites list.
+      if (this.state.myAgreementsData[addr]) {
+        continue;
+      }
+
+      MyInvites.push(
+      <div className="card">
+        <div className="row factory-agreement-top">
+          <div className ="col s7 truncate">
+            <p>Agreement contract address:</p>
+            <p>{addr}</p>
+          </div>
+        </div>
+        <div className ="row factory-agreement-bottom">
+          <div className ="col s7 truncate">
+            {this.displayCreator(creator, user_1_name)}
           </div>
           <div className ="input-field col s3">
               <button className="btn waves-effect waves-light" onClick={() => this.routeChange(addr)}> View Agreement</button>
@@ -165,6 +204,12 @@ class Factory extends Component {
         <div className = "container">
           <h1> Your EtherSplit Agreements </h1>
           { MyAgreements }
+          { MyInvites.length > 0 ?
+            <div>
+              <h3> Your Invitations to EtherSplit Agreements </h3>
+              { MyInvites }
+            </div>  : null
+          }
           <div className="row">
             <div className="input-field col s6">
               <button className="btn waves-effect waves-light" onClick={this.createNewAgreement}>Create New Agreement</button>
