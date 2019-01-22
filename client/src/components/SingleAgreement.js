@@ -82,7 +82,7 @@ registerUser2 = async () => {
   await contract.registerUser2({from: accounts[0]});
   const user_2 = await contract.user_2({from: accounts[0]})
   this.setState({user_2})
-  window.Materialize.toast('You have entered a new EtherSplit contract with '+user_1_name+'!', 8000)
+  window.Materialize.toast('You have entered a new EtherSplit contract!', 8000)
 }
 
 confirmAll = async () => {
@@ -176,11 +176,15 @@ trimError = (error) => {
 createPending = async (e) => {
   e.preventDefault();
   const { accounts, contract } = this.state;
-  // grab the form data
   const amount = e.target.amount.value;
-  const debtor = e.target.debtor.value;
-  const split = e.target.split.checked;
+  const debtorAndSplit = e.target.debtorAndSplit.value;
   const description = e.target.description.value;
+  let split;
+  // form sends value for debtor and splitTx as one string. Use String split() method to grab each one.
+  const debtor = debtorAndSplit.split(" ")[0]
+  const isSplitTx = debtorAndSplit.split(" ")[1]
+
+  split = ( isSplitTx === "splitTx" ? true : false )
 
   if (!(amount && description)) {
       window.Materialize.toast('Please enter an amount and description!', 5000)
@@ -354,20 +358,26 @@ render() {
             <EnterName setName={this.setName} /> : null
           }
             <br/>
-          <div className ="row left-align truncate">
-            {(this.accountRegistered() && this.getName(this.state.current_user) !== "") ?
-              <p>Welcome to EtherSplit, {this.getName(this.state.current_user)}!</p>
-              : <p>Welcome to EtherSplit!</p>
-            }
-            <div>Contract Address: {this.state.contract.address}</div>
-            <div>Your address: {this.state.current_user}</div>
 
-            <div>User_1's Name: {this.getName(this.state.user_1)}</div>
-            <div>User_2's Name: {this.getName(this.state.user_2)}</div>
 
-            <div>User_1's address: {this.state.user_1}</div>
-            <div>User_2's address: {this.state.user_2}</div>
-            <div>Invited Friend's Address: {this.state.invited_friend}</div>
+            <div className ="row left-align truncate">
+              <div class = "col s10">
+              <div className = "card-panel">
+              {(this.accountRegistered() && this.getName(this.state.current_user) !== "") ?
+                <h5>Welcome to EtherSplit, {this.getName(this.state.current_user)}!</h5>
+                : <p>Welcome to EtherSplit!</p>
+              }
+              <div>Contract Address: {this.state.contract.address}</div>
+              <div>Your address: {this.state.current_user}</div>
+
+              <div>User_1's Name: {this.getName(this.state.user_1)}</div>
+              <div>User_2's Name: {this.getName(this.state.user_2)}</div>
+
+              <div>User_1's address: {this.state.user_1}</div>
+              <div>User_2's address: {this.state.user_2}</div>
+              <div>Invited Friend's Address: {this.state.invited_friend}</div>
+            </div>
+          </div>
           </div>
           <br/>
           {/* Invite Friend form, visible to user_1 when no friend invited yet */}
@@ -413,69 +423,3 @@ render() {
     }
   }
 export default SingleAgreement;
-
-
-
-// Extracted SingleAgreement Body:
-
-// <div className={this.hasTwoUsers() ? null : "hidden"}>
-//   <div className ="row">
-//     <div className=" col s7">
-//       <Collapsible popout>
-//         <CollapsibleItem header= 'Create New Transaction' className='create-pending truncate'>
-//           <CreatePending createPending={this.createPending}
-//             user_1={this.state.user_1}
-//             user_2={this.state.user_2}
-//             userName1={this.getName(this.state.user_1)}
-//             userName2={this.getName(this.state.user_2)}
-//           />
-//         </CollapsibleItem>
-//       </Collapsible>
-//     </div>
-//     <div className=" col s5">
-//       <h3 className ="hide-on-small-only">Balance: <span className={this.userBal().color}>{this.userBal().sign}£{this.absBalance()}</span></h3>
-//     </div>
-//   </div>
-//   {/*List current user's Pending Txs*/}
-//   <div className="row">
-//     <div className=" col s6">
-//       <h4>My Pending Tx</h4>
-//       { this.userPendingTxs().length > 0 ?
-//         <div className="input-field">
-//           <button className="btn waves-effect waves-light" onClick={this.confirmAll}>Confirm All</button>
-//         </div> : null
-//       }
-//       <br/>
-//       <PendingTxs
-//         showMine={true}
-//         current_user = {this.state.current_user}
-//         user_1={this.state.user_1} user_2={this.state.user_2}
-//         user1_pending_txs={this.state.user1_pending_txs}
-//         user2_pending_txs={this.state.user2_pending_txs}
-//         confirmSingleTx={this.confirmSingleTx}
-//         getName = {this.getName} />
-//       </div>
-//       <div className="col s6">
-//         <h4>Their Pending Tx</h4>
-//         <br/>
-//         <br/>
-//         <br/>
-//         <PendingTxs
-//           showMine={false}
-//           current_user = {this.state.current_user}
-//           user_1={this.state.user_1} user_2={this.state.user_2}
-//           user1_pending_txs={this.state.user1_pending_txs}
-//           user2_pending_txs={this.state.user2_pending_txs}
-//           confirmSingleTx={this.confirmSingleTx}
-//           getName = {this.getName} />
-//         </div>
-//       </div>
-//       <br/>
-//       <br/>
-//       {/* List Confirmed Txs */}
-//       <div className="row">
-//         <ConfirmedTxs confirmed_txs={this.state.confirmed_txs}
-//           getName={this.getName}
-//           current_user = {this.state.current_user}/>
-//         </div>
-//       </div>

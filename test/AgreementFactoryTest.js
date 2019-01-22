@@ -319,9 +319,34 @@ contract("Agreement", accounts => {
       counter_before = await agreement.txCounter.call();
     });
 
+    it("reverts when debtor is not specified", async () => {
+      try {
+        // no debtor specified
+        await agreement.createPending(amount=50, split=false, description='I bought him sushi');
+        assert.fail();
+      } catch (err) {
+        assert.include(err.message, 'Invalid number of parameters');
+      }
+    });
+
+    it("reverts when unregistered accounts try to create a pending tx", async () => {
+      try {
+        // unregistered account tries to add a debt
+        await agreement.createPending( amount=90000, split=false, debtor=firstAccount, description='I bought him a lambo', {from: thirdAccount});
+        assert.fail();
+      } catch (err) {
+        assert.include(err.message, 'revert');
+      }
+    });
+
     describe('As user_1', function() {
       beforeEach(async () => {
-        await agreement.createPending(amount=50, split=false, debtor=secondAccount, description='I bought him sushi');
+        await agreement.createPending(
+          amount=50,
+          split=false,
+          debtor=secondAccount,
+          description='I bought him sushi'
+        );
       });
 
       it("creates a pending transaction", async () => {
@@ -399,24 +424,72 @@ contract("Agreement", accounts => {
       });
     });
 
-    it("reverts when debtor is not specified", async () => {
-      try {
-        // no debtor specified
-        await agreement.createPending(amount=50, split=false, description='I bought him sushi');
-        assert.fail();
-      } catch (err) {
-        assert.include(err.message, 'Invalid number of parameters');
-      }
-    });
+    describe('Create split transaction', function() {
+      describe('As user_1', function() {
+        beforeEach(async () => {
+          await agreement.createPending(
+            amount=50,
+            split=true,
+            debtor=secondAccount,
+            description='We split sushi'
+          );
+        });
 
-    it("reverts when unregistered accounts try to create a pending tx", async () => {
-      try {
-        // unregistered account tries to add a debt
-        await agreement.createPending( amount=90000, split=false, debtor=firstAccount, description='I bought him a lambo', {from: thirdAccount});
-        assert.fail();
-      } catch (err) {
-        assert.include(err.message, 'revert');
-      }
+        it ("Creates a pending transaction with owed amount equal to half the cost", async () => {
+          let transaction = await agreement.pendingTransactions_2(0);
+          amount = transaction[0].toNumber()
+          split = transaction[1]
+          creator = transaction[2]
+          confirmer = transaction[3]
+          debtor = transaction[4]
+          description = transaction[5]
+          index = transaction[6].toNumber()
+          timestamp = transaction[7].toNumber()
+
+          assert.equal(amount, 25)
+          assert.equal(split, true)
+          assert.equal(creator, firstAccount)
+          assert.equal(debtor, secondAccount)
+          assert.equal(confirmer, secondAccount)
+          assert.equal(description, "We split sushi")
+          assert.equal(index, 0)
+          assert.isNumber(timestamp)
+        });
+      });
+
+      // as user 2
+      describe('As user_2', function() {
+        beforeEach(async () => {
+          await agreement.createPending(
+            amount=1000,
+            split=true,
+            debtor=firstAccount,
+            description='I bought us a dog',
+            {from: secondAccount}
+          );
+        });
+
+        it ("Creates a pending transaction with owed amount equal to half the cost", async () => {
+          let transaction = await agreement.pendingTransactions_1(0);
+          amount = transaction[0].toNumber()
+          split = transaction[1]
+          creator = transaction[2]
+          confirmer = transaction[3]
+          debtor = transaction[4]
+          description = transaction[5]
+          index = transaction[6].toNumber()
+          timestamp = transaction[7].toNumber()
+
+          assert.equal(amount, 500)
+          assert.equal(split, true)
+          assert.equal(creator, secondAccount)
+          assert.equal(debtor, firstAccount)
+          assert.equal(confirmer, firstAccount)
+          assert.equal(description, "I bought us a dog")
+          assert.equal(index, 0)
+          assert.isNumber(timestamp)
+        });
+      });
     });
   });
 
@@ -501,7 +574,7 @@ contract("Agreement", accounts => {
             await agreement.confirmAll();
 
             let bal_after = await agreement.balance.call();
-            assert.equal(bal_after.toNumber(), bal_before.toNumber() - 501, ); // user_2 bought two things for user_1, of value 501.
+            assert.equal(bal_after.toNumber(), bal_before.toNumber() - 551, ); // user_2 bought two things for user_1, of value 501.
           });
         });
 
@@ -538,7 +611,7 @@ contract("Agreement", accounts => {
             await agreement.confirmAll({from: secondAccount});
 
             let bal_after = await agreement.balance.call();
-            assert.equal(bal_after.toNumber(), bal_before.toNumber() - 20, ); // user_1 owed 50, user_2 owed 30.
+            assert.equal(bal_after.toNumber(), bal_before.toNumber() - 45, ); // user_1 owed 50, user_2 owed 30.
           });
         });
 
@@ -597,13 +670,6 @@ contract("Agreement", accounts => {
             let bal_after = await agreement.balance.call();
             assert.equal(bal_after.toNumber(), bal_before.toNumber() - 500, ); // user_1 owed 50, user_2 owed 30.
           });
-
-          it("doesn't change balance if purchase was split", async () => {
-            let bal_before = await agreement.balance.call();
-            await agreement.confirmSingleTx(2);  // confirm the split tx
-            let bal_after = await agreement.balance.call();
-            assert.equal(bal_after.toNumber(), bal_before.toNumber())
-          });
         });
 
         describe("confirmSingleTx as user_2", function() {
@@ -660,13 +726,6 @@ contract("Agreement", accounts => {
 
             let bal_after = await agreement.balance.call();
             assert.equal(bal_after.toNumber(), bal_before.toNumber() + 30, ); // user_1 owed 50, user_2 owed 30.
-          });
-
-          it("doesn't change balance if purchase was split", async () => {
-            let bal_before = await agreement.balance.call();
-            await agreement.confirmSingleTx(2);  // confirm the split tx
-            let bal_after = await agreement.balance.call();
-            assert.equal(bal_after.toNumber(), bal_before.toNumber())
           });
         });
 

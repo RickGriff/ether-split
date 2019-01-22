@@ -151,9 +151,14 @@ contract Agreement {
     newPendingTx.confirmer = getOtherUser(msg.sender);
 
     uint timeNow = timeStamp();
-
+    
+    //If tx cost was split, set amounted owed to half of tx amount
+    if (_split == true) {
+      newPendingTx.amount = _amount/2;
+    } else if(_split == false) {
+      newPendingTx.amount = _amount;
+    }
     // set remaining attributes
-    newPendingTx.amount = _amount;
     newPendingTx.split = _split;
     newPendingTx.creator = msg.sender;
     newPendingTx.debtor = _debtor;
@@ -235,9 +240,7 @@ contract Agreement {
   function changeInBalance(Tx memory _purchase) private view returns (int _change) {
     // returns the change to a balance caused by a purchase
     int change = 0;
-    if (_purchase.split == true) {
-      return change;  // no overall change to balance when an expense is split
-    } else if (_purchase.debtor == user_1) {
+    if (_purchase.debtor == user_1) {
       change = -int(_purchase.amount);
       return change;
     } else if (_purchase.debtor == user_2) {

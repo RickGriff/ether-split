@@ -4,6 +4,24 @@ function ESNavbar(props) {
 
   const {userName, balance, sign, accountRegistered, singleAgreement, currentAccount, factory } = props
 
+  let navButtons;
+
+  if (singleAgreement && accountRegistered()) {
+    navButtons =
+    <div>
+      <li><a>User: {userName}</a></li>
+      <li><a>Balance: {sign} £{balance}</a></li>
+      <li><a href ='/'>Back to My Agreements</a></li>
+    </div>
+
+  } else if (singleAgreement && !accountRegistered()) {
+    navButtons = <li><a href ='/'>Back to My Agreements</a></li>
+
+  } else if (factory) {
+    navButtons = <li><a>Your address: {currentAccount}</a></li>
+  }
+
+
   return (
     <div className="navbar">
       <nav>
@@ -12,21 +30,7 @@ function ESNavbar(props) {
 
           {/*render different navbars according based on the page & whether account is registered */}
           <ul id="nav-mobile" className="left hide-on-med-and-down">
-          {singleAgreement && accountRegistered()  ?
-            <div>
-              <li><a>User: {userName}</a></li>
-              <li><a>Balance: {sign} £{balance}</a></li>
-              <li><a href ='/'>Back to My Agreements</a></li>
-            </div> : null
-          }
-
-          {singleAgreement ?
-          <li><a href ='/'>Back to My Agreements</a></li> : null
-          }
-
-          {factory ?
-            <li><a>Your address: {currentAccount}</a></li>  : null
-          }
+          {navButtons}
           </ul>
         </div>
       </nav>

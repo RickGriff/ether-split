@@ -41,18 +41,15 @@ class CreatePending extends Component {
           </div>
         </div>
         <div className="row">
-          <div className="col s6">
+          <div className="col s12">
             <label htmlFor="debtor">
-              <Input type='select' name='debtor' label='Who owes who?' defaultValue='1'>
-                <option value={this.props.user_1}>{this.props.userName1} owes {this.props.userName2} </option>
-                <option value={this.props.user_2}>{this.props.userName2} owes {this.props.userName1}</option>
+              <Input s={10} type='select' name='debtorAndSplit' label='Who owes who?' defaultValue='1'>
+                <option id="1" value={this.props.user_1}>{this.props.userName2} paid, {this.props.userName1} owes full amount</option>
+                <option id="2" value={this.props.user_2}>{this.props.userName1} paid, {this.props.userName2} owes full amount</option>
+                 {/* Options 3 & 4 for split transactions --*/}
+                <option id="3" value={this.props.user_1 + " splitTx"}>{this.props.userName2} paid, and split equally</option>
+                <option id="4" value={this.props.user_2 + " splitTx"}>{this.props.userName1} paid, and split equally</option>
               </Input>
-            </label>
-          </div>
-          <div className ="col s2">
-            <label htmlFor='split'>
-              <input type='checkbox' name='split' />
-              <span>Split transaction?</span>
             </label>
           </div>
         </div>
