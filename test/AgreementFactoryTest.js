@@ -350,8 +350,8 @@ contract("Agreement", accounts => {
       });
 
       it("creates a pending transaction", async () => {
-        assert.equal(await agreement.pendingTxs1Length.call(), 0);
-        assert.equal(await agreement.pendingTxs2Length.call(), 1);  // tx is added to user_2's pending tx list
+        assert.equal(await agreement.getPendingTxsLength1.call(), 0);
+        assert.equal(await agreement.getPendingTxsLength2.call(), 1);  // tx is added to user_2's pending tx list
       });
 
       it("increases the transaction counter by 1", async () => {
@@ -393,8 +393,8 @@ contract("Agreement", accounts => {
       });
 
       it("creates a pending transaction", async () => {
-        assert.equal(await agreement.pendingTxs1Length.call(), 1); // tx is added to user_1's pending tx list
-        assert.equal(await agreement.pendingTxs2Length.call(), 0);
+        assert.equal(await agreement.getPendingTxsLength1.call(), 1); // tx is added to user_1's pending tx list
+        assert.equal(await agreement.getPendingTxsLength2.call(), 0);
       });
 
       it("increases the transaction counter by 1", async () => {
@@ -516,8 +516,8 @@ contract("Agreement", accounts => {
       });
 
       it ("has pending transactions for each user", async () => {
-        let p1_length = await agreement.pendingTxs1Length.call();
-        let p2_length = await agreement.pendingTxs2Length.call();
+        let p1_length = await agreement.getPendingTxsLength1.call();
+        let p2_length = await agreement.getPendingTxsLength2.call();
         assert.equal(p1_length.toNumber(), 3);
         assert.equal(p2_length.toNumber(), 3);
       });
@@ -544,27 +544,27 @@ contract("Agreement", accounts => {
         describe("confirmAll As user_1", function() {
           it("deletes all user_1's pending transactions", async () => {
             await agreement.confirmAll();
-            let pending_tx_length = await agreement.pendingTxs1Length.call();
+            let pending_tx_length = await agreement.getPendingTxsLength1.call();
             assert.equal(pending_tx_length.toNumber(), 0);
           });
 
           it("adds all user_1's pending tx to confirmedTransactions", async () => {
-            let conf_txs_length_before = await agreement.confirmedTxsLength.call()
+            let conf_txs_length_before = await agreement.getConfirmedTxsLength.call()
             assert.equal(conf_txs_length_before.toNumber(), 0 );
 
             await agreement.confirmAll();
 
-            let conf_txs_length_after = await agreement.confirmedTxsLength.call()
+            let conf_txs_length_after = await agreement.getConfirmedTxsLength.call()
             assert.equal(conf_txs_length_after.toNumber(), 3);
           });
 
           it("doesn't affect user_2's pending tx", async () => {
-            let p2_length_before = await agreement.pendingTxs2Length.call();
+            let p2_length_before = await agreement.getPendingTxsLength2.call();
             assert.equal(p2_length_before.toNumber(), 3);
 
             await agreement.confirmAll();
 
-            let p2_length_after = await agreement.pendingTxs2Length.call();
+            let p2_length_after = await agreement.getPendingTxsLength2.call();
             assert.equal(p2_length_after.toNumber(), 3);
           });
 
@@ -581,27 +581,27 @@ contract("Agreement", accounts => {
         describe("confirmAll as user_2", function() {
           it("deletes all user_2's pending transactions", async () => {
             await agreement.confirmAll({from: secondAccount});
-            let pending_tx_length = await agreement.pendingTxs2Length.call();
+            let pending_tx_length = await agreement.getPendingTxsLength2.call();
             assert.equal(pending_tx_length.toNumber(), 0);
           });
 
           it("adds all user_2's pending tx to confirmedTransactions", async () => {
-            let conf_txs_length_before = await agreement.confirmedTxsLength.call()
+            let conf_txs_length_before = await agreement.getConfirmedTxsLength.call()
             assert.equal(conf_txs_length_before.toNumber(), 0 );
 
             await agreement.confirmAll({from: secondAccount});
 
-            let conf_txs_length_after = await agreement.confirmedTxsLength.call()
+            let conf_txs_length_after = await agreement.getConfirmedTxsLength.call()
             assert.equal(conf_txs_length_after.toNumber(), 3 );
           });
 
           it("doesn't affect user_1's pending tx", async () => {
-            let p1_length_before = await agreement.pendingTxs1Length.call();
+            let p1_length_before = await agreement.getPendingTxsLength1.call();
             assert.equal(p1_length_before.toNumber(), 3);
 
             await agreement.confirmAll({from: secondAccount});
 
-            let p1_length_after = await agreement.pendingTxs1Length.call();
+            let p1_length_after = await agreement.getPendingTxsLength1.call();
             assert.equal(p1_length_after.toNumber(), 3);
           });
 
@@ -626,11 +626,11 @@ contract("Agreement", accounts => {
           });
 
           it("decreases length of pending Tx list by 1", async () => {
-            let p1_length_before = await agreement.pendingTxs1Length.call();
+            let p1_length_before = await agreement.getPendingTxsLength1.call();
 
             await agreement.confirmSingleTx(0);
 
-            let p1_length_after = await agreement.pendingTxs1Length.call();
+            let p1_length_after = await agreement.getPendingTxsLength1.call();
             assert.equal(p1_length_before.toNumber() - 1, p1_length_after.toNumber());
           });
 
@@ -644,21 +644,21 @@ contract("Agreement", accounts => {
           });
 
           it("increases confirmedTx length by one", async () => {
-            let conf_length_before = await agreement.confirmedTxsLength.call();
+            let conf_length_before = await agreement.getConfirmedTxsLength.call();
 
             await agreement.confirmSingleTx(0);
 
-            let conf_length_after = await agreement.confirmedTxsLength.call();
+            let conf_length_after = await agreement.getConfirmedTxsLength.call();
             assert.equal(conf_length_before.toNumber() + 1, conf_length_after.toNumber());
           });
 
           it("doesn't affect user_2's pending tx", async () => {
-            let p2_length_before = await agreement.pendingTxs2Length.call();
+            let p2_length_before = await agreement.getPendingTxsLength2.call();
             assert.equal(p2_length_before.toNumber(), 3);
 
             await agreement.confirmSingleTx(0);
 
-            let p2_length_after = await agreement.pendingTxs2Length.call();
+            let p2_length_after = await agreement.getPendingTxsLength2.call();
             assert.equal(p2_length_after.toNumber(), 3);
           });
 
@@ -683,11 +683,11 @@ contract("Agreement", accounts => {
           });
 
           it("decreases length of pending Tx list by 2", async () => {
-            let p2_length_before = await agreement.pendingTxs1Length.call();
+            let p2_length_before = await agreement.getPendingTxsLength1.call();
 
             await agreement.confirmSingleTx(0, {from: secondAccount});
 
-            let p2_length_after = await agreement.pendingTxs2Length.call();
+            let p2_length_after = await agreement.getPendingTxsLength2.call();
             assert.equal(p2_length_before.toNumber() - 1, p2_length_after.toNumber());
           });
 
@@ -701,21 +701,21 @@ contract("Agreement", accounts => {
           });
 
           it("increases confirmedTx length by one", async () => {
-            let conf_length_before = await agreement.confirmedTxsLength.call();
+            let conf_length_before = await agreement.getConfirmedTxsLength.call();
 
             await agreement.confirmSingleTx(0, {from: secondAccount});
 
-            let conf_length_after = await agreement.confirmedTxsLength.call();
+            let conf_length_after = await agreement.getConfirmedTxsLength.call();
             assert.equal(conf_length_before.toNumber() + 1, conf_length_after.toNumber());
           });
 
           it("doesn't affect user_1's pending tx", async () => {
-            let p1_length_before = await agreement.pendingTxs1Length.call();
+            let p1_length_before = await agreement.getPendingTxsLength1.call();
             assert.equal(p1_length_before.toNumber(), 3);
 
             await agreement.confirmSingleTx(0, {from: secondAccount});
 
-            let p1_length_after = await agreement.pendingTxs1Length.call();
+            let p1_length_after = await agreement.getPendingTxsLength1.call();
             assert.equal(p1_length_after.toNumber(), 3);
           });
 

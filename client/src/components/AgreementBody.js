@@ -1,15 +1,8 @@
 import React, { Component } from "react";
-import Agreement from "../contracts/Agreement.json";
-import getWeb3 from "../utils/getWeb3";
-import truffleContract from "truffle-contract";
-import ESNavbar from './ESNavbar.js'
 import ConfirmedTxs from './ConfirmedTxs.js'
 import PendingTxs from './PendingTxs.js'
 import CreatePending from './CreatePending.js'
-import EnterName from './EnterName.js'
-import InviteFriend from './InviteFriend.js'
-import RegisterUser2 from './RegisterUser2.js'
-import { Input, Collapsible, CollapsibleItem, Button } from 'react-materialize';
+import { Collapsible, CollapsibleItem } from 'react-materialize';
 
 class AgreementBody extends Component {
 

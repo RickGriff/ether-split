@@ -1,5 +1,5 @@
 import React from 'react'
-import {Collapsible, CollapsibleItem, Badge} from 'react-materialize'
+import {Collapsible } from 'react-materialize'
 import Moment from 'react-moment';
 
 Moment.globalFormat = 'D MMM YYYY';

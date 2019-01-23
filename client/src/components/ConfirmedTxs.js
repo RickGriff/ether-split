@@ -1,5 +1,5 @@
 import React from 'react'
-import {Collapsible, CollapsibleItem} from 'react-materialize'
+import { Collapsible } from 'react-materialize'
 import Moment from 'react-moment';
 
 function ConfirmedTxs(props) {

@@ -3,16 +3,10 @@ import Agreement from "../contracts/Agreement.json";
 import getWeb3 from "../utils/getWeb3";
 import truffleContract from "truffle-contract";
 import ESNavbar from './ESNavbar.js'
-import ConfirmedTxs from './ConfirmedTxs.js'
-import PendingTxs from './PendingTxs.js'
-import CreatePending from './CreatePending.js'
 import EnterName from './EnterName.js'
 import InviteFriend from './InviteFriend.js'
 import RegisterUser2 from './RegisterUser2.js'
 import AgreementBody from './AgreementBody.js'
-import { Input, Collapsible, CollapsibleItem, Button } from 'react-materialize';
-
-//import "./App.css";
 
 class SingleAgreement extends Component {
 
@@ -78,7 +72,7 @@ inviteFriend = async (e) => {
 }
 
 registerUser2 = async () => {
-  const { accounts, contract, user_1_name } = this.state;
+  const { accounts, contract } = this.state;
   await contract.registerUser2({from: accounts[0]});
   const user_2 = await contract.user_2({from: accounts[0]})
   this.setState({user_2})
@@ -115,14 +109,14 @@ getAllPendingTxs = async (contract, fromAddress) => {
   const txList2 = [];
   const txLists = [];
   //loop through and get all user_1's pending tx
-  length1 = (await contract.pendingTxs1Length({from: fromAddress})).toNumber();
+  length1 = (await contract.getPendingTxsLength1({from: fromAddress})).toNumber();
   for (var i=0; i < length1; i++){
     const tx = await contract.pendingTransactions_1(i, {from: fromAddress})
     tx.list_id = i+1;  // start indices at 1
     txList1.push(this.cleanTx(tx))
   }
   // get all user_2's pending tx
-  length2 = (await contract.pendingTxs2Length({from: fromAddress})).toNumber();
+  length2 = (await contract.getPendingTxsLength2({from: fromAddress})).toNumber();
   for (var j=0; j < length2; j++){
     const tx = await contract.pendingTransactions_2(j)
     tx.list_id = j+1;
@@ -135,7 +129,7 @@ getAllPendingTxs = async (contract, fromAddress) => {
 
 getConfirmedTxs = async (contract, fromAddress) => {
   const { accounts }= this.state;
-  const length = (await contract.confirmedTxsLength({from: fromAddress})).toNumber();
+  const length = (await contract.getConfirmedTxsLength({from: fromAddress})).toNumber();
   const txList = [];
 
   for (var i=0; i < length; i++){  // make separate contract calls to grab each confirmedTx
@@ -306,6 +300,10 @@ hasNoInvitedFriend = () => {
   return this.isEmptyAddress(this.state.invited_friend)
 }
 
+hasInvitedFriend = () => {
+  return !this.isEmptyAddress(this.state.invited_friend)
+}
+
 hasTwoUsers = () => {
   return !this.isEmptyAddress(this.state.user_1) && !this.isEmptyAddress(this.state.user_2)
 }
@@ -359,9 +357,8 @@ render() {
           }
             <br/>
 
-
             <div className ="row left-align truncate">
-              <div class = "col s10">
+              <div className = "col s10">
               <div className = "card-panel">
               {(this.accountRegistered() && this.getName(this.state.current_user) !== "") ?
                 <h5>Welcome to EtherSplit, {this.getName(this.state.current_user)}!</h5>
@@ -386,10 +383,14 @@ render() {
            }
           {/* Register User2 button, visible to the invited friend */}
           {this.isInvitedFriend() && this.isEmptyAddress(this.state.user_2) ?
-            <RegisterUser2 registerUser2 = {this.registerUser2} user1Name = {this.state.user_1_name} /> : null
+            <RegisterUser2
+              registerUser2 = {this.registerUser2}
+              getName = {this.getName}
+              user_1 = {this.state.user_1}
+               /> : null
           }
             <div>
-            <div className={this.hasTwoUsers() && !this.hasNoInvitedFriend() ? "hidden" : null }>
+            <div className={this.isUser1() && this.hasInvitedFriend() ? null : "hidden" }>
               <h3> Awaiting registration from the invited address. </h3>
             </div>
           {/* Render SingleAgreementBody if account is registered for this agreement */}

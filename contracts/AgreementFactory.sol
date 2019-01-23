@@ -81,12 +81,6 @@ contract Agreement {
 
   uint public txCounter; // counts the number of purchases created.
 
-  // initialize uint lengths of transaction arrays. Useful because public variables have automatic getters, so we
-  // can easily grab array lengths for testing and healthchecks.
-  uint public pendingTxs1Length;
-  uint public pendingTxs2Length;
-  uint public confirmedTxsLength;
-
   mapping( address => Tx[] ) public pendingTransactions; // map user to the list of their pending transactions.
 
   // Solidity doesn't allow elems in nested arrays to be directly called via web3. So explicitly set each user's Tx array, for external calls
@@ -151,7 +145,7 @@ contract Agreement {
     newPendingTx.confirmer = getOtherUser(msg.sender);
 
     uint timeNow = timeStamp();
-    
+
     //If tx cost was split, set amounted owed to half of tx amount
     if (_split == true) {
       newPendingTx.amount = _amount/2;
@@ -172,8 +166,6 @@ contract Agreement {
 
     pendingTransactions_1 = pendingTransactions[user_1];
     pendingTransactions_2 = pendingTransactions[user_2];
-    pendingTxs1Length = getPendingTxsLength1();
-    pendingTxs2Length = getPendingTxsLength2();
   }
 
   function confirmAll() onlyUser onlyBothRegistered public {
@@ -191,9 +183,6 @@ contract Agreement {
 
     pendingTransactions_1 = pendingTransactions[user_1];
     pendingTransactions_2 = pendingTransactions[user_2];
-    pendingTxs1Length = getPendingTxsLength1();
-    pendingTxs2Length = getPendingTxsLength2();
-    confirmedTxsLength = getConfirmedTxsLength();
     balance = balance + balanceChange;
   }
 
@@ -215,9 +204,6 @@ contract Agreement {
     //update stored lengths
     pendingTransactions_1 = pendingTransactions[user_1];
     pendingTransactions_2 = pendingTransactions[user_2];
-    pendingTxs1Length = getPendingTxsLength1();
-    pendingTxs2Length = getPendingTxsLength2();
-    confirmedTxsLength = getConfirmedTxsLength();
 
     balance = balance + changeInBalance(transaction);
   }
@@ -263,15 +249,15 @@ contract Agreement {
   }
 
   // Length getters for lists of confirmed & pending txs
-  function getPendingTxsLength1() internal view returns(uint) {
+  function getPendingTxsLength1() public view returns(uint) {
     return pendingTransactions[user_1].length;
   }
 
-  function getPendingTxsLength2() internal view returns(uint) {
+  function getPendingTxsLength2() public view returns(uint) {
     return pendingTransactions[user_2].length;
   }
 
-  function getConfirmedTxsLength() internal view returns(uint) {
+  function getConfirmedTxsLength() public view returns(uint) {
     return confirmedTransactions.length;
   }
 

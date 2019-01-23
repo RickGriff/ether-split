@@ -1,19 +1,9 @@
 import React, { Component } from "react";
-import { BrowserRouter, Route, Switch } from 'react-router-dom';
 import Agreement from "../contracts/Agreement.json";
 import AgreementFactory from "../contracts/AgreementFactory.json";
 import getWeb3 from "../utils/getWeb3";
 import truffleContract from "truffle-contract";
-import ESNavbar from './ESNavbar.js'
-import ConfirmedTxs from './ConfirmedTxs.js'
-import PendingTxs from './PendingTxs.js'
-import CreatePending from './CreatePending.js'
-import EnterName from './EnterName.js'
-import InviteFriend from './InviteFriend.js'
-import RegisterUser2 from './RegisterUser2.js'
-import { Input, Collapsible, CollapsibleItem, Button } from 'react-materialize';
-
-// import "../App.css";
+import ESNavbar from './ESNavbar.js';
 
 class Factory extends Component {
 
@@ -140,7 +130,7 @@ class Factory extends Component {
       const user_1_name = this.state.myAgreementsData[addr]["user_1_name"]
 
       MyAgreements.push(
-      <div className="card">
+      <div className="card" key={addr}>
         <div className="row factory-agreement-top">
           <div className ="col s7 truncate">
             <p>Agreement contract address:</p>
