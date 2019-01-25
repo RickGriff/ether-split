@@ -9,8 +9,8 @@ contract("AgreementFactory", accounts => {
   describe ('Deployment', function (){
     it("registers the deploying account as creator", async () => {
       const agreementFactory = await AgreementFactory.new();
-      let creator = await agreementFactory.creator.call();
-      assert.equal(creator, firstAccount)
+      let factoryOwner = await agreementFactory.factoryOwner.call();
+      assert.equal(factoryOwner, firstAccount)
     });
   });
 
@@ -188,6 +188,12 @@ contract("Agreement", accounts => {
       await agreement.inviteFriend(secondAccount);
     });
 
+    it("Sets the factory owner", async () => {
+      let actualFactoryOwner = await agreementFactory.factoryOwner();
+      let parentFactoryOwner = await agreement.parentFactoryOwner();
+      assert.equal(actualFactoryOwner, parentFactoryOwner);
+    });
+
     it("registers the deploying account as user_1", async () => {
       let user_1 = await agreement.user_1.call()
       assert.equal(user_1, firstAccount);
@@ -302,7 +308,6 @@ contract("Agreement", accounts => {
       });
     });
   });
-
 
   describe('Create pending transaction', function() {
     let agreement;
@@ -750,10 +755,8 @@ contract("Agreement", accounts => {
         });
       });
 
-      describe('balanceHealthcheck', function() {
-
+      describe('balanceHealthCheck', function() {
         it("Verifies the running balance equals sum of all confirmed txs", async () => {
-
           let start_balances = await agreement.balanceHealthCheck.call();
 
           assert.equal(start_balances[0].toNumber(), start_balances[1].toNumber());
@@ -766,8 +769,16 @@ contract("Agreement", accounts => {
           assert.equal(latest_balances[0].toNumber(), latest_balances[1].toNumber());
           assert.isTrue(start_balances[2]);
         });
+
+        it ("Reverts when called from unathorized account", async () => {
+          try {
+            await agreement.balanceHealthCheck({from: thirdAccount});
+            assert.fail();
+          } catch (err) {
+            assert.include(err.message, 'revert');
+          }
+        });
       });
-    });
 
     describe('Attempt to transact with contract with only 1 user registered', function() {
       beforeEach(async () => {
@@ -812,3 +823,4 @@ contract("Agreement", accounts => {
       });
     });
   });
+});
