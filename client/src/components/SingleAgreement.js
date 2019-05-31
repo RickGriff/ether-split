@@ -24,7 +24,9 @@ class SingleAgreement extends Component {
     user1_pending_txs: [],
     user2_pending_txs: [],
     confirmed_txs: [],
-    test_state: null
+    test_state: null,
+    setName_clicks: 0,
+    inviteFriend_clicks: 0
   };
 
   componentDidMount = async () => {
@@ -55,9 +57,10 @@ class SingleAgreement extends Component {
 
     } catch (error) {
       // Catch any errors for above operations
-      alert(
-      `Failed to load web3, accounts, contract, users, or transactions. Check console for details.`
-    );
+      window.Materialize.toast(
+      `Failed to load web3, accounts, contract, users, or transactions -- check console for details. Please make sure your MetaMask or chosen
+      digital Ether wallet is enabled.`, 6000
+      );
     console.log(error);
   }
 };
@@ -65,10 +68,20 @@ class SingleAgreement extends Component {
 inviteFriend = async (e) => {
   e.preventDefault();
   const friend = e.target.address.value
-  const { accounts, contract } = this.state;
-  await contract.inviteFriend(friend, { from: accounts[0] });
-  const invited_friend = await contract.invited_friend({from: accounts[0]});
-  this.setState({invited_friend})
+  const { accounts, contract, inviteFriend_clicks } = this.state;
+  let clicks = inviteFriend_clicks;
+
+  if (clicks === 0) {
+    clicks += 1;
+    window.Materialize.toast(
+    "Please check your friend's address is correct! Mistakes can not be reversed. Please click Invite again to set it.", 7000)
+    this.setState({inviteFriend_clicks: clicks}, this.logState);
+  } else if (clicks > 0) {
+    clicks += 1;
+    await contract.inviteFriend(friend, { from: accounts[0] });
+    const invited_friend = await contract.invited_friend({from: accounts[0]});
+    this.setState({invited_friend, inviteFriend_clicks: clicks})
+  }
 }
 
 registerUser2 = async () => {
@@ -189,7 +202,7 @@ createPending = async (e) => {
     await contract.createPending(amount, split, debtor, description, {from: accounts[0]})
   }
   catch(error) { // return the error message
-    window.Materialize.toast(this.trimError(error), 6000)
+    window.Materialize.toast(this.trimError(error), 8000)
     return null
   }
 
@@ -219,18 +232,28 @@ logState = () => {
 }
 
 setName = async (e) => {
-  const { current_user, user_1, user_2, contract, accounts } = this.state;
+  const { current_user, user_1, user_2, contract, accounts, setName_clicks } = this.state;
+  let clicks = setName_clicks;
   e.preventDefault();
-  const name = e.target.name.value;
-  console.log(name)
-  await contract.setName(name, {from: accounts[0]});
-  let recordedName;
-  if (current_user === user_1) {
-    recordedName =  await contract.user_1_name();
-    this.setState({user_1_name: recordedName}, this.logState);
-  } else if (current_user === user_2) {
-    recordedName =  await contract.user_2_name();
-    this.setState({user_2_name: recordedName}, this.logState);
+
+  if (clicks === 0) {
+    clicks += 1;
+    window.Materialize.toast(
+    'Please check your name for this agreement is correct! It will be permanently recorded on the blockchain. Please click Submit again to set it.', 7000)
+    this.setState({setName_clicks: clicks}, this.logState);
+  } else if (clicks > 0) {
+    clicks += 1;
+    const name = e.target.name.value;
+    await contract.setName(name, {from: accounts[0]});
+
+    let recordedName;
+    if (current_user === user_1) {
+      recordedName =  await contract.user_1_name();
+      this.setState({user_1_name: recordedName, setName_clicks: clicks}, this.logState);
+    } else if (current_user === user_2) {
+      recordedName =  await contract.user_2_name();
+      this.setState({user_2_name: recordedName, setName_clicks: clicks }, this.logState);
+    }
   }
 }
 

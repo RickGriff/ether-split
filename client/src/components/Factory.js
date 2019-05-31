@@ -44,9 +44,9 @@ class Factory extends Component {
      this.setState({ web3, accounts, currentAccount, factory, myInvites, myAgreements, myAgreementsData, myInvitesData }, this.logState)
     } catch (error) {
       // Catch any errors for above operations
-      alert(
-      `Failed to load web3, accounts, contract, users, or transactions. Check console for details.`
-    );
+        window.Materialize.toast(
+        `Failed to load web3, accounts, contract, users, or transactions -- check console for details. Please make sure your MetaMask or chosen
+        digital Ether wallet is enabled.`, 6000);
       console.log(error);
     }
   };
