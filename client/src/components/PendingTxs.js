@@ -27,9 +27,9 @@ function PendingTxs(props) {
 
   const PendingTxs = orderedTxs.map(tx => {
     return (
-      <li>
+      <li key ={tx.list_id}>
         <div className = "collapsible-header truncate">
-          <i class="material-icons">
+          <i className="material-icons">
             {current_user === tx.debtor ? 'remove' : 'add'}
           </i>
           {tx.description}

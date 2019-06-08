@@ -180,10 +180,27 @@ trimError = (error) => {
   }
 }
 
+
+validateAmount = (num) => {
+ // check num is a positive monetary number, up to 2 decimal places
+ if (!(/^\d+(\.\d{1,2})?$/.test(num))) {
+  return false
+ }
+ return true
+}
+
+
 createPending = async (e) => {
   e.preventDefault();
   const { accounts, contract } = this.state;
   const amount = e.target.amount.value;
+ 
+  // check for a valid amount before proceeding
+  if (!this.validateAmount(amount)) {
+    window.Materialize.toast('Please enter a valid, positive amount', 5000)
+    return null
+  }  
+
   const debtorAndSplit = e.target.debtorAndSplit.value;
   const description = e.target.description.value;
   let split;
@@ -382,7 +399,7 @@ render() {
 
             <div className ="row left-align truncate">
               <div className = "col s10">
-              <div className = "card-panel">
+              <div className = "card-panel truncate">
               {(this.accountRegistered() && this.getName(this.state.current_user) !== "") ?
                 <h5>Welcome to EtherSplit, {this.getName(this.state.current_user)}!</h5>
                 : <p>Welcome to EtherSplit!</p>

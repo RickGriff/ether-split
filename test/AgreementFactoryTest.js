@@ -365,15 +365,16 @@ contract("Agreement", accounts => {
       });
 
       it("creates a pending tx with the correct properties", async () => {
-        let transaction = await agreement.pendingTransactions_2(0);
+        let transaction = await agreement.pendingTxs2(1); // grab tx with id = 1
         amount = transaction[0].toNumber()
         split = transaction[1]
         creator = transaction[2]
         confirmer = transaction[3]
         debtor = transaction[4]
         description = transaction[5]
-        index = transaction[6].toNumber()
+        id = transaction[6].toNumber()
         timestamp = transaction[7].toNumber()
+        index = transaction[8].toNumber()
 
         assert.equal(amount, 50)
         assert.equal(split, false)
@@ -381,8 +382,9 @@ contract("Agreement", accounts => {
         assert.equal(debtor, secondAccount)
         assert.equal(confirmer, secondAccount)
         assert.equal(description, "I bought him sushi")
-        assert.equal(index, 0)
+        assert.equal(id, 1)
         assert.isNumber(timestamp)
+        assert.equal(index, 0)
       });
     });
 
@@ -408,15 +410,16 @@ contract("Agreement", accounts => {
       });
 
       it("creates a pending tx with the correct properties", async () => {
-        let transaction = await agreement.pendingTransactions_1(0);
+        let transaction = await agreement.pendingTxs1(1);
         amount = transaction[0].toNumber()
         split = transaction[1]
         creator = transaction[2]
         confirmer = transaction[3]
         debtor = transaction[4]
         description = transaction[5]
-        index = transaction[6].toNumber()
+        id = transaction[6].toNumber()
         timestamp = transaction[7].toNumber()
+        index = transaction[8].toNumber()
 
         assert.equal(amount, 1000)
         assert.equal(split, false)
@@ -424,8 +427,9 @@ contract("Agreement", accounts => {
         assert.equal(debtor, firstAccount)
         assert.equal(confirmer, firstAccount)
         assert.equal(description, "I bought her a dog")
-        assert.equal(index, 0)
+        assert.equal(id, 1)
         assert.isNumber(timestamp)
+        assert.equal(index, 0)
       });
     });
 
@@ -441,15 +445,16 @@ contract("Agreement", accounts => {
         });
 
         it ("Creates a pending transaction with owed amount equal to half the cost", async () => {
-          let transaction = await agreement.pendingTransactions_2(0);
+          let transaction = await agreement.pendingTxs2(1);
           amount = transaction[0].toNumber()
           split = transaction[1]
           creator = transaction[2]
           confirmer = transaction[3]
           debtor = transaction[4]
           description = transaction[5]
-          index = transaction[6].toNumber()
+          id = transaction[6].toNumber()
           timestamp = transaction[7].toNumber()
+          index = transaction[8].toNumber()
 
           assert.equal(amount, 25)
           assert.equal(split, true)
@@ -457,8 +462,9 @@ contract("Agreement", accounts => {
           assert.equal(debtor, secondAccount)
           assert.equal(confirmer, secondAccount)
           assert.equal(description, "We split sushi")
-          assert.equal(index, 0)
+          assert.equal(id, 1)
           assert.isNumber(timestamp)
+          assert.equal(index, 0)
         });
       });
 
@@ -475,15 +481,16 @@ contract("Agreement", accounts => {
         });
 
         it ("Creates a pending transaction with owed amount equal to half the cost", async () => {
-          let transaction = await agreement.pendingTransactions_1(0);
+          let transaction = await agreement.pendingTxs1(1);
           amount = transaction[0].toNumber()
           split = transaction[1]
           creator = transaction[2]
           confirmer = transaction[3]
           debtor = transaction[4]
           description = transaction[5]
-          index = transaction[6].toNumber()
+          id = transaction[6].toNumber()
           timestamp = transaction[7].toNumber()
+          index = transaction[8].toNumber()
 
           assert.equal(amount, 500)
           assert.equal(split, true)
@@ -491,14 +498,15 @@ contract("Agreement", accounts => {
           assert.equal(debtor, firstAccount)
           assert.equal(confirmer, firstAccount)
           assert.equal(description, "I bought us a dog")
-          assert.equal(index, 0)
+          assert.equal(id, 1)
           assert.isNumber(timestamp)
+          assert.equal(index, 0)
         });
       });
     });
   });
 
-  describe("Confirming transactions", function() {
+  describe("Confirming and deleting transactions", function() {
     beforeEach(
       async () => {
         //simulate agreement creation from firstAccount, via AgreementFactory
@@ -687,7 +695,7 @@ contract("Agreement", accounts => {
             assert.notEqual(tx[6].toNumber(), first_pending_tx[6].toNumber(), "the transaction is no longer in the list of pending txs") // structs are returned as tuples of values. The 7th elem of a Tx struct is it's index, hence [6].
           });
 
-          it("decreases length of pending Tx list by 2", async () => {
+          it("decreases length of pending Tx list by 1", async () => {
             let p2_length_before = await agreement.getPendingTxsLength1.call();
 
             await agreement.confirmSingleTx(0, {from: secondAccount});
@@ -755,72 +763,148 @@ contract("Agreement", accounts => {
         });
       });
 
-      describe('balanceHealthCheck', function() {
-        it("Verifies the running balance equals sum of all confirmed txs", async () => {
-          let start_balances = await agreement.balanceHealthCheck.call();
-
-          assert.equal(start_balances[0].toNumber(), start_balances[1].toNumber());
-          assert.isTrue(start_balances[2]);
-
-          await agreement.confirmAll();
-          await agreement.confirmAll({from: secondAccount});
-
-          let latest_balances = await agreement.balanceHealthCheck.call();
-          assert.equal(latest_balances[0].toNumber(), latest_balances[1].toNumber());
-          assert.isTrue(start_balances[2]);
-        });
-
-        it ("Reverts when called from unathorized account", async () => {
+   
+      describe.only('deletePendingTx', function() {
+        it("reverts when unregistered account tries to deletePending", async () => {
           try {
-            await agreement.balanceHealthCheck({from: thirdAccount});
+            await agreement.deletePendingTx(1, {from: thirdAccount});
             assert.fail();
           } catch (err) {
             assert.include(err.message, 'revert');
           }
         });
+
+        it("reverts when user_1 tries to delete a pendingTx user_2 created", async () => {
+          try {
+            await agreement.deletePendingTx(4);
+            assert.fail();
+          } catch (err) {
+            assert.include(err.message, 'revert');
+          }
+        });
+
+        it("reverts when user_2 tries to delete a pendingTx user_1 created", async () => {
+          try {
+            await agreement.deletePendingTx(1, {from: secondAccount});  
+            assert.fail();
+          } catch (err) {
+            assert.include(err.message, 'revert');
+          }
+        });
+
+        it("reverts when user tries to delete a pendingTx that doesn't exist", async () => {
+          try {
+            await agreement.deletePendingTx(7);  
+            assert.fail();
+          } catch (err) {
+            assert.include(err.message, 'revert');
+          }
+        });
+    
+        it("reduces length of pendingTxList by one", async() => {
+          /// when user_1 deletes, tx is removed from user_2's list
+          let length_before = await agreement.getPendingTxsLength2();
+          await agreement.deletePendingTx(2); 
+          let length_after = await agreement.getPendingTxsLength2();
+          assert.equal (length_after.toNumber(), length_before.toNumber() - 1);
+        });
+
+        it("logs the index of the deleted tx in an event", async() => {
+          let transaction = await agreement.deletePendingTx(1); // delete tx with ID 1
+          let tx_index = transaction.logs[0].args[1].toNumber()
+          
+          assert.equal(tx_index, 0)  // check tx was element with index 0 in the pendingTx list 
+        });
+
+        it("removes the pendingTx UID from the pendingTxList", async() => {
+          let txStruct = await agreement.pendingTxs2(1);
+          let id = txStruct[6].toNumber();
+          let index = txStruct[8].toNumber();
+
+          await agreement.deletePendingTx(1);
+
+          let new_list_element = await agreement.pendingTxsList2(index);
+          assert.notEqual(id, new_list_element); // check that a different UID has replaced it in the array slot
+        });
+
+        it("moves the last tx in the pendingTxList to the empty slot left by the deleted tx", async() => {
+          let txStruct = await agreement.pendingTxs2(2)
+          let index = txStruct[8].toNumber();
+          let pendingTxsLength = await agreement.getPendingTxsLength2();
+          let lastTxID_beforeMove = await agreement.pendingTxsList2(pendingTxsLength - 1)  // grab id of tx at end of pendingTxs list
+          await agreement.deletePendingTx(2);
+
+          let newTxIDAtIndex = await agreement.pendingTxsList2(index);
+          assert.equal(newTxIDAtIndex.toNumber(), lastTxID_beforeMove.toNumber());
+        });
+      });
+      
+    describe('balanceHealthCheck', function() {
+      it("Verifies the running balance equals sum of all confirmed txs", async () => {
+        let start_balances = await agreement.balanceHealthCheck.call();
+
+        assert.equal(start_balances[0].toNumber(), start_balances[1].toNumber());
+        assert.isTrue(start_balances[2]);
+
+        await agreement.confirmAll();
+        await agreement.confirmAll({from: secondAccount});
+
+        let latest_balances = await agreement.balanceHealthCheck.call();
+        assert.equal(latest_balances[0].toNumber(), latest_balances[1].toNumber());
+        assert.isTrue(start_balances[2]);
       });
 
-    describe('Attempt to transact with contract with only 1 user registered', function() {
-      beforeEach(async () => {
-        //simulate agreement creation from firstAccount, via AgreementFactory
-        agreementFactory = await AgreementFactory.new();
-        agreementTx = await agreementFactory.createNewAgreement();
-        agreementAddr = agreementTx.logs[0].args[1];
-        agreement = await Agreement.at(agreementAddr);
-      });
-
-      it("reverts when user_1 tries to createPending",  async () => {
+      it ("Reverts when called from unathorized account", async () => {
         try {
-          await agreement.createPending(
-            amount=50,
-            split=false,
-            debtor=secondAccount,
-            description='I bought him sushi',
-          );
+          await agreement.balanceHealthCheck({from: thirdAccount});
           assert.fail();
         } catch (err) {
           assert.include(err.message, 'revert');
         }
       });
+    });
+  });
 
-      //Somewhat redundant, as user_1 has no pending tx's to confirm
-      it("reverts when user_1 tries to confirm all transactions",  async () => {
-        try {
-          await agreement.confirmAll();
-          assert.fail();
-        } catch (err) {
-          assert.include(err.message, 'revert');
-        }
-      });
+  describe('Attempt to transact with contract with only 1 user registered', function() {
+    beforeEach(async () => {
+      //simulate agreement creation from firstAccount, via AgreementFactory
+      agreementFactory = await AgreementFactory.new();
+      agreementTx = await agreementFactory.createNewAgreement();
+      agreementAddr = agreementTx.logs[0].args[1];
+      agreement = await Agreement.at(agreementAddr);
+    });
 
-      it("reverts when user_1 tries to confirm a single tx",  async () => {
-        try {
-          await agreement.confirmSingleTx(0);
-          assert.fail();
-        } catch (err) {
-          assert.include(err.message, 'revert');
-        }
-      });
+    it("reverts when user_1 tries to createPending",  async () => {
+      try {
+        await agreement.createPending(
+          amount=50,
+          split=false,
+          debtor=secondAccount,
+          description='I bought him sushi',
+        );
+        assert.fail();
+      } catch (err) {
+        assert.include(err.message, 'revert');
+      }
+    });
+
+    //Somewhat redundant, as user_1 has no pending tx's to confirm
+    it("reverts when user_1 tries to confirm all transactions",  async () => {
+      try {
+        await agreement.confirmAll();
+        assert.fail();
+      } catch (err) {
+        assert.include(err.message, 'revert');
+      }
+    });
+
+    it("reverts when user_1 tries to confirm a single tx",  async () => {
+      try {
+        await agreement.confirmSingleTx(0);
+        assert.fail();
+      } catch (err) {
+        assert.include(err.message, 'revert');
+      }
     });
   });
 });

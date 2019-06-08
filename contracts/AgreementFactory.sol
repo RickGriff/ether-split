@@ -89,18 +89,16 @@ contract Agreement {
   /// The net balance of who owes who.  Positive if user_2 owes more, negative if user_1 owes more.
   int public balance;
 
-  uint public txCounter; /// counts the number of transactions created.
+  uint public txCounter = 0; /// counts the number of transactions created.
 
-  /// Map user to the list of the pending transactions.
-  mapping( address => Tx[] ) public pendingTransactions;
+  mapping (uint => Tx) public pendingTxs1; /// Txs pending confirmation from user_1
+  uint[] public pendingTxsList1; /// unordered list of user_1's pending Tx IDs
 
-  /** @dev It's not possible to call elements in nested arrays via web3.
-  * So explicitly set a Tx array for user 1 and user 2, to allow calls from UI.
-  * Assignment happens in the 'createPending' func. */
-  Tx[] public pendingTransactions_1;
-  Tx[] public pendingTransactions_2;
+  mapping (uint => Tx) public pendingTxs2; 
+  uint[] public pendingTxsList2; 
 
-  Tx[] public confirmedTransactions;
+  Tx[] public confirmedTxs;
+  uint[] public confirmedTxsList;
 
   /// basic transaction object.
   struct Tx {
@@ -110,8 +108,9 @@ contract Agreement {
     address confirmer;
     address debtor;
     string description;
-    uint index;
+    uint id;
     uint timestamp;
+    uint index;  
   }
 
   ///  ****** constructor and user registration functions ******
@@ -121,6 +120,9 @@ contract Agreement {
     parentFactoryOwner = factory.factoryOwner();
     user_1 = _creator;
   }
+
+   event logNewPendingTx (uint id, uint listIndex, uint amount, address creator);
+   event logDeletedTx (uint id, uint listIndex, uint amount, address creator);
 
   /// Store the user's name
   function setName(string memory _name) onlyUser public {
@@ -150,101 +152,150 @@ contract Agreement {
     factory.newRegisteredUser(user_2);
   }
 
+
   /// ****** Functions for creating and confirming transactions ******
 
   /// Create a pending Tx, to be confirmed by the other user
   function createPending(uint _amount, bool _split, address _debtor, string  memory _description) onlyUser onlyBothRegistered public {
     require( _debtor == user_1 || _debtor == user_2, 'debtor must be a registered user' );
     require( bytes(_description).length < 35, 'Description too long' );
+    txCounter = txCounter.add(1);
+
+    /* since Solidity dislikes initialization inside conditionals, 
+    initialize list  & mapping for msg.sender == user_1, and reassign if msg.sender == user_2. */
+    uint[] storage pendingTxsList = pendingTxsList2;
+    mapping (uint => Tx) storage pendingTxs = pendingTxs2;
+    
+    if (msg.sender == user_2) {
+      pendingTxsList = pendingTxsList1;
+      pendingTxs = pendingTxs1;
+    }
 
     uint timeNow = timeStamp();
-
     Tx memory newPendingTx;
 
-    /// set the other user as confirmer
     newPendingTx.confirmer = getOtherUser(msg.sender);
+
     /// If Tx cost was split, set the amounted owed to half of Tx amount
     if (_split == true) {
-      newPendingTx.amount = _amount/2;
+      newPendingTx.amount = _amount / 2;
     } else if(_split == false) {
       newPendingTx.amount = _amount;
     }
-    /// set remaining Tx attributes
+
+    /// set remaining Tx struct attributes
     newPendingTx.split = _split;
     newPendingTx.creator = msg.sender;
     newPendingTx.debtor = _debtor;
     newPendingTx.description = _description;
-    newPendingTx.index = txCounter;
+    newPendingTx.id = txCounter;
     newPendingTx.timestamp = timeNow;
+    // push the Tx ID to the list - and assign the corresponding list index to the Tx.index property
+    newPendingTx.index = pendingTxsList.push(newPendingTx.id) - 1;  
 
-    /// append new Tx to the confirmer's pending Tx array, and update Tx counter
-    pendingTransactions[newPendingTx.confirmer].push(newPendingTx);
-    txCounter = txCounter.add(1);
+    /// insert new Tx to the confirmer's pending Tx mapping
+    pendingTxs[txCounter] = newPendingTx;
+    emit logNewPendingTx(newPendingTx.id, newPendingTx.index, newPendingTx.amount, newPendingTx.creator);
+  }
 
-    /// Update Tx lists
-    pendingTransactions_1 = pendingTransactions[user_1];
-    pendingTransactions_2 = pendingTransactions[user_2];
+  function deletePendingTx(uint _id) onlyUser onlyBothRegistered public returns(uint) {
+    uint[] storage pendingTxsList = pendingTxsList2;
+    mapping (uint => Tx) storage pendingTxs = pendingTxs2;
+    
+    if (msg.sender == user_2) {
+      pendingTxsList = pendingTxsList1;
+      pendingTxs = pendingTxs1;
+      require(isPendingTx1(_id), "Tx is not in user's pending Tx list");
+    } else {
+    require(isPendingTx2(_id), "Tx is not in user's pending Tx list");
+    }
+    
+    require(msg.sender == pendingTxs[_id].creator, "a user can only delete a pending tx they created" );
+    
+    /* delete the pendingTx from the list.  
+    We dont need to remove the mapping - the list of tx IDs is what determines existence.
+    This approach preserves array length, but not order. */
+    uint indexToDelete = pendingTxs[_id].index;
+    uint txIDToMove = pendingTxsList[pendingTxsList.length - 1]; // grab the last tx in list
+    pendingTxsList[indexToDelete] = txIDToMove; /// move last tx to emtpy slot, replacing the deleted one
+    pendingTxs[txIDToMove].index = indexToDelete; /// in the mapping, update the index pointer of the tx that moved
+
+    pendingTxsList.length--;
+    emit logDeletedTx(_id, indexToDelete, pendingTxs[_id].amount, pendingTxs[_id].creator );
+    return indexToDelete;
   }
 
   function confirmAll() onlyUser onlyBothRegistered public {
-    Tx[] storage allPendingTx = pendingTransactions[msg.sender];
-    Tx[] memory memAllPendingTx = allPendingTx;  /// copy pending Txs to memory
+    // Tx[] storage allPendingTx = pendingTransactions[msg.sender];
+    // Tx[] memory memAllPendingTx = allPendingTx;  /// copy pending Txs to memory
 
-    allPendingTx.length = 0; /// delete all pending txs in storage
+    // allPendingTx.length = 0; /// delete all pending txs in storage
 
-    int balanceChange  = 0;
-    /// Add all pending Txs to confirmed Tx list, and calculate the net change in balance
-    for (uint i = 0; i < memAllPendingTx.length; i++) {
-      confirmedTransactions.push(memAllPendingTx[i]);
-      balanceChange = balanceChange + changeInBalance(memAllPendingTx[i]);
-    }
+    // int balanceChange  = 0;
+    // /// Add all pending Txs to confirmed Tx list, and calculate the net change in balance
+    // for (uint i = 0; i < memAllPendingTx.length; i++) {
+    //   confirmedTransactions.push(memAllPendingTx[i]);
+    //   balanceChange = balanceChange + changeInBalance(memAllPendingTx[i]);
+    // }
 
-    /// update lists and balance
-    pendingTransactions_1 = pendingTransactions[user_1];
-    pendingTransactions_2 = pendingTransactions[user_2];
-    balance = balance + balanceChange;
+    // balance = balance + balanceChange;
   }
 
   function confirmSingleTx(uint _txIndex) onlyUser onlyBothRegistered public {
-    Tx[] storage allPendingTx =  pendingTransactions[msg.sender];
+    // // Tx[] storage allPendingTx =  pendingTransactions[msg.sender];
 
-    uint len = allPendingTx.length;
-    Tx memory transaction = allPendingTx[_txIndex];  /// copy Tx to memory
+    // uint len = allPendingTx.length;
+    // Tx memory transaction = allPendingTx[_txIndex];  /// copy Tx to memory
 
-    /** @dev delete transaction fron pendingTx list.
-    * This approach preserves array length, but not order:
-    */
-    delete allPendingTx[_txIndex]; /// delete Tx, leaving empty slot
-    allPendingTx[_txIndex] = allPendingTx[len - 1];  /// copy last Tx to empty slot
-    delete allPendingTx[len - 1];   /// delete the last Tx
-    allPendingTx.length--;  /// decrement array size by one to remove last (empty) slot
+    // /** @dev delete transaction fron pendingTx list.
+    // * This approach preserves array length, but not order:
+    // */
+    // delete allPendingTx[_txIndex]; /// delete Tx, leaving empty slot
+    // allPendingTx[_txIndex] = allPendingTx[len - 1];  /// copy last Tx to empty slot
+    // delete allPendingTx[len - 1];   /// delete the last Tx
+    // allPendingTx.length--;  /// decrement array size by one to remove last (empty) slot
 
-    /// Append Tx to confirmed transactions list
-    confirmedTransactions.push(transaction);
+    // /// Append Tx to confirmed transactions list
+    // // confirmedTransactions.push(transaction);
 
-    /// Update lists and balance
-    pendingTransactions_1 = pendingTransactions[user_1];
-    pendingTransactions_2 = pendingTransactions[user_2];
-    balance = balance + changeInBalance(transaction);
+    // /// Update lists and balance
+    // // pendingTransactions_1 = pendingTransactions[user_1];
+    // // pendingTransactions_2 = pendingTransactions[user_2];
+    // balance = balance + changeInBalance(transaction);
   }
 
   /** Calculates balance from scratch from total confirmed Tx history,
   * and checks it is equal to running balance.
   */
   function balanceHealthCheck () onlyUserOrFactoryOwner public view returns (int _testBal, int _bal, bool) {
-    int testBalance = 0;
-    for (uint i = 0; i < confirmedTransactions.length; i++) {
-      testBalance = testBalance + changeInBalance(confirmedTransactions[i]);
-    }
+    // int testBalance = 0;
+    // // for (uint i = 0; i < confirmedTransactions.length; i++) {
+    //   // testBalance = testBalance + changeInBalance(confirmedTransactions[i]);
+    // // }
 
-    if (testBalance != balance) {
-      return(testBalance, balance, false);
-    } else if (testBalance == balance) {
-      return(testBalance, balance, true);
-    }
+    // if (testBalance != balance) {
+    //   return(testBalance, balance, false);
+    // } else if (testBalance == balance) {
+    //   return(testBalance, balance, true);
+    // }
   }
 
   /// ****** Helper and getter functions ******
+
+  function isPendingTx1(uint _id) public view returns(bool isIndeed) {
+    if(pendingTxsList1.length == 0) return false;
+    return (pendingTxsList1[pendingTxs1[_id].index] == _id);
+  }
+
+  function isPendingTx2(uint _id) public view returns(bool isIndeed) {
+    if(pendingTxsList2.length == 0) return false;
+    return (pendingTxsList2[pendingTxs2[_id].index] == _id);
+  }
+
+  function isconfirmedTx(uint _id) public view returns(bool isIndeed) {
+    if(confirmedTxsList.length == 0) return false;
+    return (confirmedTxsList[confirmedTxs[_id].index] == _id);
+  }
 
   /// Return the change to a balance caused by a purchase
   function changeInBalance(Tx memory _purchase) private view returns (int _change) {
@@ -273,15 +324,15 @@ contract Agreement {
 
   /// Length getters for lists of Txs
   function getPendingTxsLength1() public view returns(uint) {
-    return pendingTransactions[user_1].length;
+    return pendingTxsList1.length;
   }
 
   function getPendingTxsLength2() public view returns(uint) {
-    return pendingTransactions[user_2].length;
+    return pendingTxsList2.length;
   }
 
   function getConfirmedTxsLength() public view returns(uint) {
-    return confirmedTransactions.length;
+    return confirmedTxsList.length;
   }
 
   /// ****** Modifiers *****
