@@ -545,29 +545,21 @@ contract("Agreement", accounts => {
           }
         });
 
-        it("reverts when unregistered account try to confirmSingleTx", async () => {
-          try {
-            await agreement.confirmSingleTx(0, {from: thirdAccount})   // unregistered account tries to add a deb  );
-            assert.fail();
-          } catch (err) {
-            assert.include(err.message, 'revert');
-          }
-        });
-
         describe("confirmAll As user_1", function() {
           it("deletes all user_1's pending transactions", async () => {
-            await agreement.confirmAll();
-            let pending_tx_length = await agreement.getPendingTxsLength1.call();
+            let receipt = await agreement.confirmAll();
+
+            let pending_tx_length = await agreement.getPendingTxsLength1();
             assert.equal(pending_tx_length.toNumber(), 0);
           });
 
           it("adds all user_1's pending tx to confirmedTransactions", async () => {
-            let conf_txs_length_before = await agreement.getConfirmedTxsLength.call()
+            let conf_txs_length_before = await agreement.getConfirmedTxsLength()
             assert.equal(conf_txs_length_before.toNumber(), 0 );
 
             await agreement.confirmAll();
 
-            let conf_txs_length_after = await agreement.getConfirmedTxsLength.call()
+            let conf_txs_length_after = await agreement.getConfirmedTxsLength()
             assert.equal(conf_txs_length_after.toNumber(), 3);
           });
 
@@ -587,7 +579,7 @@ contract("Agreement", accounts => {
             await agreement.confirmAll();
 
             let bal_after = await agreement.balance.call();
-            assert.equal(bal_after.toNumber(), bal_before.toNumber() - 551, ); // user_2 bought two things for user_1, of value 501.
+            assert.equal(bal_after.toNumber(), bal_before.toNumber() - 551, ); // tx amounts: 500 + 1 + 100/2
           });
         });
 
@@ -624,150 +616,154 @@ contract("Agreement", accounts => {
             await agreement.confirmAll({from: secondAccount});
 
             let bal_after = await agreement.balance.call();
-            assert.equal(bal_after.toNumber(), bal_before.toNumber() - 45, ); // user_1 owed 50, user_2 owed 30.
+            assert.equal(bal_after.toNumber(), bal_before.toNumber() - 45, ); // tx amounts: 50 - 30  +50/2
           });
         });
+      });
+
+      describe("confirmSingleTx", function() {
+      it("reverts when unregistered account try to confirmSingleTx", async () => {
+        try {
+          await agreement.confirmSingleTx(0, {from: thirdAccount})   // unregistered account tries to add a deb  );
+          assert.fail();
+        } catch (err) {
+          assert.include(err.message, 'revert');
+        }
+      });
 
         describe("confirmSingleTx as user_1", function() {
-          it("removes that tx from pending tx1", async () => {
-            let tx = await agreement.pendingTransactions_1(0)
-
-            await agreement.confirmSingleTx(0);
-
-            let first_pending_tx = await agreement.pendingTransactions_1(0);
-            assert.notEqual(tx[6].toNumber(), first_pending_tx[6].toNumber(), "the transaction is no longer in the list of pending txs") // structs are returned as tuples of values. The 7th elem of a Tx struct is it's index, hence [6].
+          it("reduces length of pendingTxList by one", async() => {
+            /// when user_1 deletes, tx is removed from user_2's list
+            let length_before = await agreement.getPendingTxsLength1();
+          
+            await agreement.confirmSingleTx(4); // tx ID 4 is the first tx created by user_2, to be confirmed by user_1
+            let length_after = await agreement.getPendingTxsLength1();
+            assert.equal (length_after.toNumber(), length_before.toNumber() - 1);
           });
-
-          it("decreases length of pending Tx list by 1", async () => {
-            let p1_length_before = await agreement.getPendingTxsLength1.call();
-
-            await agreement.confirmSingleTx(0);
-
-            let p1_length_after = await agreement.getPendingTxsLength1.call();
-            assert.equal(p1_length_before.toNumber() - 1, p1_length_after.toNumber());
+  
+          it("removes the pending Tx ID from the pendingTxList", async() => {
+            let tx_struct = await agreement.pendingTxs1(4);
+            let tx_id = tx_struct[6].toNumber();
+            
+            await agreement.confirmSingleTx(4);
+  
+            let pending_txs_length = await agreement.getPendingTxsLength1();
+            let pending_txs = []
+  
+            for (let i = 0;  i < pending_txs_length; i++) {  // check that tx_ID is no longer present
+              let list_element = await agreement.pendingTxsList1(i)
+              pending_txs.push(list_element.toNumber())
+            }
+            assert.notInclude(pending_txs, tx_id)
           });
 
           it("adds it to confirmedTx array", async () => {
-            let tx = await agreement.pendingTransactions_1(0);
+            let tx_id = await agreement.pendingTxsList1(0); // tx at slot 0
 
-            await agreement.confirmSingleTx(0);
+            await agreement.confirmSingleTx(4); // tx with ID = 4
 
-            let latest_confirmed = await agreement.confirmedTransactions(0);
-            assert.equal(latest_confirmed[6].toNumber(), tx[6].toNumber(), "the transaction is now in the confirmed txs list") // check the txs have the same index
+            conf_length = await agreement.getConfirmedTxsLength()
+  
+            let latest_confirmed = await agreement.confirmedTxsList(conf_length - 1)
+            assert.equal(latest_confirmed.toNumber(), tx_id.toNumber()) // check the txs have the same id
           });
 
           it("increases confirmedTx length by one", async () => {
-            let conf_length_before = await agreement.getConfirmedTxsLength.call();
+            let conf_length_before = await agreement.getConfirmedTxsLength();
 
-            await agreement.confirmSingleTx(0);
+            await agreement.confirmSingleTx(4);
 
-            let conf_length_after = await agreement.getConfirmedTxsLength.call();
+            let conf_length_after = await agreement.getConfirmedTxsLength();
             assert.equal(conf_length_before.toNumber() + 1, conf_length_after.toNumber());
           });
 
           it("doesn't affect user_2's pending tx", async () => {
-            let p2_length_before = await agreement.getPendingTxsLength2.call();
-            assert.equal(p2_length_before.toNumber(), 3);
+            let p2_length_before = await agreement.getPendingTxsLength2();
+            
+            await agreement.confirmSingleTx(4);
 
-            await agreement.confirmSingleTx(0);
-
-            let p2_length_after = await agreement.getPendingTxsLength2.call();
-            assert.equal(p2_length_after.toNumber(), 3);
+            let p2_length_after = await agreement.getPendingTxsLength2();
+            assert.equal(p2_length_after.toNumber(), p2_length_before.toNumber());
           });
 
           it("updates balance in storage", async () => {
-            let bal_before = await agreement.balance.call();
+            let bal_before = await agreement.balance();
 
-            await agreement.confirmSingleTx(0);
+            await agreement.confirmSingleTx(4);
 
-            let bal_after = await agreement.balance.call();
-            assert.equal(bal_after.toNumber(), bal_before.toNumber() - 500, ); // user_1 owed 50, user_2 owed 30.
-          });
+            let bal_after = await agreement.balance();
+            assert.equal(bal_after.toNumber(), bal_before.toNumber() - 500, );
         });
+      });
 
         describe("confirmSingleTx as user_2", function() {
-          it("removes that tx from pending tx2", async () => {
-            let tx = await agreement.pendingTransactions_2(0)
-
-            await agreement.confirmSingleTx(0, {from: secondAccount});
-
-            let first_pending_tx = await agreement.pendingTransactions_2(0);
-            assert.notEqual(tx[6].toNumber(), first_pending_tx[6].toNumber(), "the transaction is no longer in the list of pending txs") // structs are returned as tuples of values. The 7th elem of a Tx struct is it's index, hence [6].
+          it("reduces length of pendingTxList by one", async() => {
+            /// when user_1 deletes, tx is removed from user_2's list
+            let length_before = await agreement.getPendingTxsLength2();
+            await agreement.confirmSingleTx(2, {from: secondAccount});
+            let length_after = await agreement.getPendingTxsLength2();
+            assert.equal (length_after.toNumber(), length_before.toNumber() - 1);
           });
-
-          it("decreases length of pending Tx list by 1", async () => {
-            let p2_length_before = await agreement.getPendingTxsLength1.call();
-
-            await agreement.confirmSingleTx(0, {from: secondAccount});
-
-            let p2_length_after = await agreement.getPendingTxsLength2.call();
-            assert.equal(p2_length_before.toNumber() - 1, p2_length_after.toNumber());
+  
+          it("removes the pending Tx ID from the pendingTxList", async() => {
+            let tx_struct = await agreement.pendingTxs2(2);
+            let tx_id = tx_struct[6].toNumber();
+            
+            await agreement.confirmSingleTx(2, {from: secondAccount});
+  
+            let pending_txs_length = await agreement.getPendingTxsLength2();
+            let pending_txs = []
+  
+            for (let i = 0;  i < pending_txs_length; i++) {  // check that tx_ID is no longer present
+              let list_element = await agreement.pendingTxsList2(i)
+              pending_txs.push(list_element.toNumber())
+            }
+            assert.notInclude(pending_txs, tx_id)
           });
 
           it("adds it to confirmedTx array", async () => {
-            let tx = await agreement.pendingTransactions_2(0);
+            let tx_id = await agreement.pendingTxsList2(1);  // tx at slot 1
+            await agreement.confirmSingleTx(2, {from: secondAccount});  // tx with ID = 2
 
-            await agreement.confirmSingleTx(0, {from: secondAccount});
-
-            let latest_confirmed = await agreement.confirmedTransactions(0);
-            assert.equal(latest_confirmed[6].toNumber(), tx[6].toNumber(), "the transaction is now in the confirmed txs list") // check the txs have the same index
+            conf_length = await agreement.getConfirmedTxsLength()
+  
+            let latest_confirmed = await agreement.confirmedTxsList(conf_length - 1)
+            assert.equal(latest_confirmed.toNumber(), tx_id.toNumber()) // check the txs have the same id
           });
 
           it("increases confirmedTx length by one", async () => {
             let conf_length_before = await agreement.getConfirmedTxsLength.call();
 
-            await agreement.confirmSingleTx(0, {from: secondAccount});
+            await agreement.confirmSingleTx(2, {from: secondAccount});
 
-            let conf_length_after = await agreement.getConfirmedTxsLength.call();
+            let conf_length_after = await agreement.getConfirmedTxsLength();
             assert.equal(conf_length_before.toNumber() + 1, conf_length_after.toNumber());
           });
 
           it("doesn't affect user_1's pending tx", async () => {
             let p1_length_before = await agreement.getPendingTxsLength1.call();
-            assert.equal(p1_length_before.toNumber(), 3);
-
-            await agreement.confirmSingleTx(0, {from: secondAccount});
+           
+            await agreement.confirmSingleTx(2, {from: secondAccount});
 
             let p1_length_after = await agreement.getPendingTxsLength1.call();
-            assert.equal(p1_length_after.toNumber(), 3);
+            assert.equal(p1_length_after.toNumber(), p1_length_after.toNumber());
           });
 
           it("updates balance in storage", async () => {
             let bal_before = await agreement.balance.call();
 
-            await agreement.confirmSingleTx(0, {from: secondAccount});
+            await agreement.confirmSingleTx(2, {from: secondAccount});
 
             let bal_after = await agreement.balance.call();
-            assert.equal(bal_after.toNumber(), bal_before.toNumber() + 30, ); // user_1 owed 50, user_2 owed 30.
-          });
-        });
-
-        describe("confirmAll & confirmSingleTx from an unregistered account", function () {
-          it("reverts when unregistered account tries to confirmAll", async () => {
-            try {
-              await agreement.confirmAll({from: thirdAccount});
-              assert.fail();
-            } catch (err) {
-              assert.include(err.message, 'revert');
-            }
-          });
-
-          it("reverts when unregistered account tries to confirmSingleTx", async () => {
-            try {
-              await agreement.confirmSingleTx(0, {from: thirdAccount});
-              assert.fail();
-            } catch (err) {
-              assert.include(err.message, 'revert');
-            }
+            assert.equal(bal_after.toNumber(), bal_before.toNumber() - 50, );
           });
         });
       });
-
-   
-      describe.only('deletePendingTx', function() {
+      
+      describe('userDeletePendingTx', function() {
         it("reverts when unregistered account tries to deletePending", async () => {
           try {
-            await agreement.deletePendingTx(1, {from: thirdAccount});
+            await agreement.userDeletePendingTx(1, {from: thirdAccount});
             assert.fail();
           } catch (err) {
             assert.include(err.message, 'revert');
@@ -776,7 +772,7 @@ contract("Agreement", accounts => {
 
         it("reverts when user_1 tries to delete a pendingTx user_2 created", async () => {
           try {
-            await agreement.deletePendingTx(4);
+            await agreement.userDeletePendingTx(4);
             assert.fail();
           } catch (err) {
             assert.include(err.message, 'revert');
@@ -785,7 +781,7 @@ contract("Agreement", accounts => {
 
         it("reverts when user_2 tries to delete a pendingTx user_1 created", async () => {
           try {
-            await agreement.deletePendingTx(1, {from: secondAccount});  
+            await agreement.userDeletePendingTx(1, {from: secondAccount});  
             assert.fail();
           } catch (err) {
             assert.include(err.message, 'revert');
@@ -794,7 +790,7 @@ contract("Agreement", accounts => {
 
         it("reverts when user tries to delete a pendingTx that doesn't exist", async () => {
           try {
-            await agreement.deletePendingTx(7);  
+            await agreement.userDeletePendingTx(7);  
             assert.fail();
           } catch (err) {
             assert.include(err.message, 'revert');
@@ -804,38 +800,44 @@ contract("Agreement", accounts => {
         it("reduces length of pendingTxList by one", async() => {
           /// when user_1 deletes, tx is removed from user_2's list
           let length_before = await agreement.getPendingTxsLength2();
-          await agreement.deletePendingTx(2); 
+          await agreement.userDeletePendingTx(2); 
           let length_after = await agreement.getPendingTxsLength2();
           assert.equal (length_after.toNumber(), length_before.toNumber() - 1);
         });
 
         it("logs the index of the deleted tx in an event", async() => {
-          let transaction = await agreement.deletePendingTx(1); // delete tx with ID 1
+          let transaction = await agreement.userDeletePendingTx(1); // delete tx with ID 1
           let tx_index = transaction.logs[0].args[1].toNumber()
           
           assert.equal(tx_index, 0)  // check tx was element with index 0 in the pendingTx list 
         });
 
-        it("removes the pendingTx UID from the pendingTxList", async() => {
-          let txStruct = await agreement.pendingTxs2(1);
-          let id = txStruct[6].toNumber();
-          let index = txStruct[8].toNumber();
+        it("removes the pending Tx ID from the pendingTxList", async() => {
+          let tx_struct = await agreement.pendingTxs2(1);
+          let tx_id = tx_struct[6].toNumber();
+          let index = tx_struct[8].toNumber();
+          
+          await agreement.userDeletePendingTx(1);
 
-          await agreement.deletePendingTx(1);
+          let pending_txs_length = await agreement.getPendingTxsLength2();
+          let pending_txs = []
 
-          let new_list_element = await agreement.pendingTxsList2(index);
-          assert.notEqual(id, new_list_element); // check that a different UID has replaced it in the array slot
+          for (let i = 0;  i < pending_txs_length; i++) {  // check that tx_ID is no longer present
+            let list_element = await agreement.pendingTxsList2(i)
+            pending_txs.push(list_element.toNumber())
+          }
+          assert.notInclude(pending_txs, tx_id)
         });
 
-        it("moves the last tx in the pendingTxList to the empty slot left by the deleted tx", async() => {
-          let txStruct = await agreement.pendingTxs2(2)
-          let index = txStruct[8].toNumber();
-          let pendingTxsLength = await agreement.getPendingTxsLength2();
-          let lastTxID_beforeMove = await agreement.pendingTxsList2(pendingTxsLength - 1)  // grab id of tx at end of pendingTxs list
-          await agreement.deletePendingTx(2);
+        it("moves the last tx ID in the pendingTxList to the empty slot left by the deleted tx ID", async() => {
+          let tx_struct = await agreement.pendingTxs2(2)
+          let index = tx_struct[8].toNumber();
+          let pending_txs_length = await agreement.getPendingTxsLength2();
+          let last_txID_beforeMove = await agreement.pendingTxsList2(pending_txs_length - 1)  // grab id of tx at end of pendingTxs list
+          await agreement.userDeletePendingTx(2);
 
-          let newTxIDAtIndex = await agreement.pendingTxsList2(index);
-          assert.equal(newTxIDAtIndex.toNumber(), lastTxID_beforeMove.toNumber());
+          let new_txID_at_index = await agreement.pendingTxsList2(index);
+          assert.equal(new_txID_at_index.toNumber(), last_txID_beforeMove.toNumber());
         });
       });
       
@@ -908,3 +910,4 @@ contract("Agreement", accounts => {
     });
   });
 });
+

@@ -97,7 +97,7 @@ contract Agreement {
   mapping (uint => Tx) public pendingTxs2; 
   uint[] public pendingTxsList2; 
 
-  Tx[] public confirmedTxs;
+  mapping (uint => Tx) public confirmedTxs;
   uint[] public confirmedTxsList;
 
   /// basic transaction object.
@@ -198,58 +198,65 @@ contract Agreement {
     emit logNewPendingTx(newPendingTx.id, newPendingTx.index, newPendingTx.amount, newPendingTx.creator);
   }
 
-  function deletePendingTx(uint _id) onlyUser onlyBothRegistered public returns(uint) {
-    uint[] storage pendingTxsList = pendingTxsList2;
+  function userDeletePendingTx(uint _id) onlyUser onlyBothRegistered public returns(uint) {
+    /// grab *other* user's pending Txs, and check that msg.sender created it
     mapping (uint => Tx) storage pendingTxs = pendingTxs2;
-    
     if (msg.sender == user_2) {
-      pendingTxsList = pendingTxsList1;
       pendingTxs = pendingTxs1;
-      require(isPendingTx1(_id), "Tx is not in user's pending Tx list");
-    } else {
-    require(isPendingTx2(_id), "Tx is not in user's pending Tx list");
-    }
-    
+    } 
     require(msg.sender == pendingTxs[_id].creator, "a user can only delete a pending tx they created" );
-    
-    /* delete the pendingTx from the list.  
-    We dont need to remove the mapping - the list of tx IDs is what determines existence.
-    This approach preserves array length, but not order. */
-    uint indexToDelete = pendingTxs[_id].index;
-    uint txIDToMove = pendingTxsList[pendingTxsList.length - 1]; // grab the last tx in list
-    pendingTxsList[indexToDelete] = txIDToMove; /// move last tx to emtpy slot, replacing the deleted one
-    pendingTxs[txIDToMove].index = indexToDelete; /// in the mapping, update the index pointer of the tx that moved
 
-    pendingTxsList.length--;
-    emit logDeletedTx(_id, indexToDelete, pendingTxs[_id].amount, pendingTxs[_id].creator );
-    return indexToDelete;
+    address otherUser = getOtherUser(msg.sender);
+    return deletePendingTx(_id, otherUser); // returns id of deleted Tx
   }
 
   function confirmAll() onlyUser onlyBothRegistered public {
-    // Tx[] storage allPendingTx = pendingTransactions[msg.sender];
-    // Tx[] memory memAllPendingTx = allPendingTx;  /// copy pending Txs to memory
+    int balanceChange;
 
-    // allPendingTx.length = 0; /// delete all pending txs in storage
+    uint[] storage pendingTxsList = pendingTxsList1;
+    mapping (uint => Tx) storage pendingTxs = pendingTxs1;
 
-    // int balanceChange  = 0;
-    // /// Add all pending Txs to confirmed Tx list, and calculate the net change in balance
-    // for (uint i = 0; i < memAllPendingTx.length; i++) {
-    //   confirmedTransactions.push(memAllPendingTx[i]);
-    //   balanceChange = balanceChange + changeInBalance(memAllPendingTx[i]);
-    // }
+    if (msg.sender == user_2) {
+      pendingTxsList = pendingTxsList2;
+      pendingTxs = pendingTxs2;
+    }
+    
+    for (uint i = 0; i < pendingTxsList.length; i++) {
+      uint id = pendingTxsList[i];
+      require(!isConfirmedTx(id), "Tx is already confirmed");
+      confirmedTxs[id] = pendingTxs[id]; /// insert tx to mapping
+      confirmedTxsList.push(id); /// append tx id to list
 
-    // balance = balance + balanceChange;
+      balanceChange = balanceChange + changeInBalance(pendingTxs[id]);
+    }
+
+    pendingTxsList.length = 0;
+    balance = balance + balanceChange;
   }
 
-  function confirmSingleTx(uint _txIndex) onlyUser onlyBothRegistered public {
-    // // Tx[] storage allPendingTx =  pendingTransactions[msg.sender];
+  function confirmSingleTx(uint _id) onlyUser onlyBothRegistered public {
+    mapping (uint => Tx) storage pendingTxs = pendingTxs1;
+    if (msg.sender == user_2) {
+      pendingTxs = pendingTxs2;
+    } 
+    require(msg.sender == pendingTxs[_id].confirmer, "User can only confirm their own pending Txs" );
+    require(getOtherUser(msg.sender) == pendingTxs[_id].creator, "User can only confirm pending Txs created by other user " );
+    
+    Tx memory transaction = pendingTxs[_id];
 
-    // uint len = allPendingTx.length;
-    // Tx memory transaction = allPendingTx[_txIndex];  /// copy Tx to memory
+    deletePendingTx(_id, msg.sender); /// Remove tx ID from user's pendingTx list
+   
+    /// Update confirmedTx mapping and ID list
+    require(!isConfirmedTx(_id), "Tx is already confirmed");
+    confirmedTxs[_id] = transaction;
+    confirmedTxsList.push(_id);
+   
+    balance = balance + changeInBalance(transaction);
 
-    // /** @dev delete transaction fron pendingTx list.
-    // * This approach preserves array length, but not order:
-    // */
+    // / Tx[] storage allPendingTx =  pendingTransactions[msg.sender];
+    // // uint len = allPendingTx.length;
+    // // Tx memory transaction = allPendingTx[_txIndex];  /// copy Tx to memory
+
     // delete allPendingTx[_txIndex]; /// delete Tx, leaving empty slot
     // allPendingTx[_txIndex] = allPendingTx[len - 1];  /// copy last Tx to empty slot
     // delete allPendingTx[len - 1];   /// delete the last Tx
@@ -267,7 +274,7 @@ contract Agreement {
   /** Calculates balance from scratch from total confirmed Tx history,
   * and checks it is equal to running balance.
   */
-  function balanceHealthCheck () onlyUserOrFactoryOwner public view returns (int _testBal, int _bal, bool) {
+  // function balanceHealthCheck () onlyUserOrFactoryOwner public view returns (int _testBal, int _bal, bool) {
     // int testBalance = 0;
     // // for (uint i = 0; i < confirmedTransactions.length; i++) {
     //   // testBalance = testBalance + changeInBalance(confirmedTransactions[i]);
@@ -278,9 +285,39 @@ contract Agreement {
     // } else if (testBalance == balance) {
     //   return(testBalance, balance, true);
     // }
-  }
+  // }
 
   /// ****** Helper and getter functions ******
+
+  function deletePendingTx (uint _id, address _user) private returns (uint) {
+    require (_user == user_1 || _user == user_2, "deletePendingTx must receive either user_1 or user_2");
+    
+    uint[] storage pendingTxsList = pendingTxsList2;
+    mapping (uint => Tx) storage pendingTxs = pendingTxs2;
+    
+    if (_user == user_1) {
+      pendingTxsList = pendingTxsList1;
+      pendingTxs = pendingTxs1;
+      require(isPendingTx1(_id), "Tx ID is not in user_1's pending Tx list");
+    } else if (_user == user_2) {
+      pendingTxsList = pendingTxsList2;
+      pendingTxs = pendingTxs2;
+      require(isPendingTx2(_id), "Tx ID is not in user_2's pending Tx list");
+    }
+      /* delete the pendingTx from the list.  
+    We dont need to remove the mapping - the list of tx IDs is what determines existence.
+    This approach preserves array length, but not order. */
+    uint indexToDelete = pendingTxs[_id].index;
+    uint txIDToMove = pendingTxsList[pendingTxsList.length - 1]; // grab the last tx in list
+    pendingTxsList[indexToDelete] = txIDToMove; /// move last tx to emtpy slot, replacing the deleted one
+    pendingTxs[txIDToMove].index = indexToDelete; /// in the mapping, update the index pointer of the tx that moved
+
+    pendingTxsList.length--;
+    emit logDeletedTx(_id, indexToDelete, pendingTxs[_id].amount, pendingTxs[_id].creator );
+    return indexToDelete;
+  }
+
+
 
   function isPendingTx1(uint _id) public view returns(bool isIndeed) {
     if(pendingTxsList1.length == 0) return false;
@@ -292,7 +329,7 @@ contract Agreement {
     return (pendingTxsList2[pendingTxs2[_id].index] == _id);
   }
 
-  function isconfirmedTx(uint _id) public view returns(bool isIndeed) {
+  function isConfirmedTx(uint _id) public view returns(bool isIndeed) {
     if(confirmedTxsList.length == 0) return false;
     return (confirmedTxsList[confirmedTxs[_id].index] == _id);
   }
