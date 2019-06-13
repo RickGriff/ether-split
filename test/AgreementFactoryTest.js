@@ -843,7 +843,7 @@ contract("Agreement", accounts => {
       
     describe('balanceHealthCheck', function() {
       it("Verifies the running balance equals sum of all confirmed txs", async () => {
-        let start_balances = await agreement.balanceHealthCheck.call();
+        let start_balances = await agreement.balanceHealthCheck();
 
         assert.equal(start_balances[0].toNumber(), start_balances[1].toNumber());
         assert.isTrue(start_balances[2]);

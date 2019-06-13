@@ -252,40 +252,25 @@ contract Agreement {
     confirmedTxsList.push(_id);
    
     balance = balance + changeInBalance(transaction);
-
-    // / Tx[] storage allPendingTx =  pendingTransactions[msg.sender];
-    // // uint len = allPendingTx.length;
-    // // Tx memory transaction = allPendingTx[_txIndex];  /// copy Tx to memory
-
-    // delete allPendingTx[_txIndex]; /// delete Tx, leaving empty slot
-    // allPendingTx[_txIndex] = allPendingTx[len - 1];  /// copy last Tx to empty slot
-    // delete allPendingTx[len - 1];   /// delete the last Tx
-    // allPendingTx.length--;  /// decrement array size by one to remove last (empty) slot
-
-    // /// Append Tx to confirmed transactions list
-    // // confirmedTransactions.push(transaction);
-
-    // /// Update lists and balance
-    // // pendingTransactions_1 = pendingTransactions[user_1];
-    // // pendingTransactions_2 = pendingTransactions[user_2];
-    // balance = balance + changeInBalance(transaction);
   }
 
   /** Calculates balance from scratch from total confirmed Tx history,
   * and checks it is equal to running balance.
   */
-  // function balanceHealthCheck () onlyUserOrFactoryOwner public view returns (int _testBal, int _bal, bool) {
-    // int testBalance = 0;
-    // // for (uint i = 0; i < confirmedTransactions.length; i++) {
-    //   // testBalance = testBalance + changeInBalance(confirmedTransactions[i]);
-    // // }
+  function balanceHealthCheck() onlyUserOrFactoryOwner public view returns (int _testBal, int _bal, bool) {
+    int testBalance = 0;
 
-    // if (testBalance != balance) {
-    //   return(testBalance, balance, false);
-    // } else if (testBalance == balance) {
-    //   return(testBalance, balance, true);
-    // }
-  // }
+    for (uint i = 0; i < confirmedTxsList.length; i++) {
+      uint tx_id = confirmedTxsList[i];
+      testBalance = testBalance + changeInBalance(confirmedTxs[tx_id]);
+    }
+
+    if (testBalance != balance) {
+      return(testBalance, balance, false);
+    } else if (testBalance == balance) {
+      return(testBalance, balance, true);
+    }
+  }
 
   /// ****** Helper and getter functions ******
 
