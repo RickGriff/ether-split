@@ -10,7 +10,7 @@ function ConfirmedTxs(props) {
 
   const ConfirmedTxs = orderedTxs.map(tx => {
     return (
-      <li key ={tx.list_id}>
+      <li key ={tx.id}>
         <div className = "collapsible-header">
           <i className="material-icons">
             {current_user === tx.debtor ? 'remove' : 'add'}
@@ -21,7 +21,7 @@ function ConfirmedTxs(props) {
           </span>
         </div>
         <div className = "collapsible-body">
-          <div>#{tx.list_id} </div>
+          <div>#{tx.id} </div>
           <div> { getName(tx.debtor) } owes £{ tx.amount } </div>
           <div> For: { tx.description } </div>
           <div> Debt added by { getName(tx.creator) } </div>

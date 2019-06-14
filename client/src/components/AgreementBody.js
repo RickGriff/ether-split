@@ -25,6 +25,7 @@ class AgreementBody extends Component {
     user1_pending_txs,
     user2_pending_txs,
     confirmSingleTx,
+    deletePendingTx,
     confirmAll,
     confirmed_txs
     } = this.props
@@ -81,6 +82,7 @@ class AgreementBody extends Component {
                 user1_pending_txs={user1_pending_txs}
                 user2_pending_txs={user2_pending_txs}
                 confirmSingleTx={confirmSingleTx}
+                deletePendingTx={deletePendingTx}
                 getName = {getName}
                 txTraits = {txTraits}
               />

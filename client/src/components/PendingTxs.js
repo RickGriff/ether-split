@@ -5,7 +5,17 @@ import Moment from 'react-moment';
 Moment.globalFormat = 'D MMM YYYY';
 
 function PendingTxs(props) {
-  const {showMine, current_user, user_1, user_2, user1_pending_txs, user2_pending_txs, confirmSingleTx, getName, txTraits } = props
+  const {
+    showMine, 
+    current_user, 
+    user_1, user_2, 
+    user1_pending_txs, 
+    user2_pending_txs, 
+    confirmSingleTx, 
+    deletePendingTx,
+    getName, 
+    txTraits 
+  } = props
 
   let pending_txs; // txs to be rendered
 
@@ -27,7 +37,7 @@ function PendingTxs(props) {
 
   const PendingTxs = orderedTxs.map(tx => {
     return (
-      <li key ={tx.list_id}>
+      <li key ={tx.id}>
         <div className = "collapsible-header truncate">
           <i className="material-icons">
             {current_user === tx.debtor ? 'remove' : 'add'}
@@ -44,13 +54,16 @@ function PendingTxs(props) {
           <div> Debt added by { getName(tx.creator) } </div>
           <div> Date created: <Moment unix>{tx.timestamp}</Moment> </div>
           <div> Contract Transaction ID: { tx.id } </div>
-          { showMine ?
-            <div className="input-field col s3">
-              <button className="btn waves-effect waves-light" onClick={() => {confirmSingleTx(tx.list_id)}}>Confirm</button>
-              </div> : null
-          }
-          <br/>
-          <br/>
+          <div className="row">
+            { showMine ?
+              <div className="input-field col s3">
+                <button className="btn waves-effect waves-light" onClick={() => {confirmSingleTx(tx.id)}}>Confirm</button>
+              </div> : 
+              <div className="input-field col s3">
+                <button className="btn waves-effect waves-light red lighten-2" onClick={() => {deletePendingTx(tx.id)}}>Delete</button>
+              </div>
+            }
+          </div>
         </div>
       </li>
 

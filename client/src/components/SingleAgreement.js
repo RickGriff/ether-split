@@ -103,15 +103,22 @@ confirmAll = async () => {
   window.Materialize.toast('All pending transactions confirmed.', 5000)
 }
 
-confirmSingleTx = async (list_id) => {
+confirmSingleTx = async (tx_id) => {
   const { accounts, contract } = this.state;
-  // As list_id starts at 1, pass (list_id - 1) as argument to the contract call.
-  await contract.confirmSingleTx(list_id - 1, { from: accounts[0], gas: 1000000});
-  // update pending TX list and confirmed Tx list
+  await contract.confirmSingleTx(tx_id, { from: accounts[0]});
+  // update pending Tx list and confirmed Tx list
   const updatedPending = await this.getAllPendingTxs(contract)
   const updatedConfirmed = await this.getConfirmedTxs(contract)
   const updatedBalance = (await contract.balance({from: accounts[0]})).toNumber();
   this.setState({user1_pending_txs: updatedPending[0], user2_pending_txs: updatedPending[1], confirmed_txs: updatedConfirmed, balance: updatedBalance})
+  window.Materialize.toast('Transaction confirmed.', 5000)
+}
+
+deletePendingTx = async (tx_id) => {
+  const { accounts, contract } = this.state;
+  await contract.userDeletePendingTx(tx_id, { from: accounts[0]});
+  const updatedPending = await this.getAllPendingTxs(contract)
+  this.setState({user1_pending_txs: updatedPending[0], user2_pending_txs: updatedPending[1]})
   window.Materialize.toast('Transaction confirmed.', 5000)
 }
 
@@ -123,16 +130,16 @@ getAllPendingTxs = async (contract, fromAddress) => {
   const txLists = [];
   //loop through and get all user_1's pending tx
   length1 = (await contract.getPendingTxsLength1({from: fromAddress})).toNumber();
-  for (var i=0; i < length1; i++){
-    const tx = await contract.pendingTransactions_1(i, {from: fromAddress})
-    tx.list_id = i+1;  // start indices at 1
+  for (let i=0; i < length1; i++){
+    const id = await contract.pendingTxsList1(i, {from: fromAddress})
+    const tx = await contract.pendingTxs1(id, {from: fromAddress})
     txList1.push(this.cleanTx(tx))
   }
   // get all user_2's pending tx
   length2 = (await contract.getPendingTxsLength2({from: fromAddress})).toNumber();
-  for (var j=0; j < length2; j++){
-    const tx = await contract.pendingTransactions_2(j)
-    tx.list_id = j+1;
+  for (let j=0; j < length2; j++){
+    const id = await contract.pendingTxsList2(j, {from: fromAddress})
+    const tx = await contract.pendingTxs2(id, {from: fromAddress})
     txList2.push(this.cleanTx(tx))
   }
   txLists.push(txList1)
@@ -141,33 +148,31 @@ getAllPendingTxs = async (contract, fromAddress) => {
 }
 
 getConfirmedTxs = async (contract, fromAddress) => {
-  const { accounts }= this.state;
   const length = (await contract.getConfirmedTxsLength({from: fromAddress})).toNumber();
   const txList = [];
 
   for (var i=0; i < length; i++){  // make separate contract calls to grab each confirmedTx
-    const tx = await contract.confirmedTransactions(i, {from: fromAddress});
-    tx.list_id = i+1;
+    const id = await contract.confirmedTxsList(i, {from: fromAddress})
+    const tx = await contract.confirmedTxs(id, {from: fromAddress})
     txList.push(this.cleanTx(tx))
   }
-  console.log("hi")
   return txList;
 }
 
 cleanTx = (tx) => {
   // return a clean representation of a transaction, for use in React state
-  const {list_id, amount, creator, confirmer, debtor, split, description, index, timestamp } = tx;
+  const {amount, split, creator, confirmer, debtor, description, id, timestamp, index } = tx;
 
   const clean_tx = {
-    list_id: list_id,
     amount: amount.toNumber(),
+    split: split.toString(),
     creator: creator,
     confirmer: confirmer,
     debtor: debtor,
-    split: split.toString(),
     description: description,
-    id: index.toNumber(),
-    timestamp: timestamp.toNumber()
+    id: id.toNumber(),
+    timestamp: timestamp.toNumber(),
+    contract_index: index.toNumber()
   }
   return clean_tx
 }
@@ -204,7 +209,7 @@ createPending = async (e) => {
   const debtorAndSplit = e.target.debtorAndSplit.value;
   const description = e.target.description.value;
   let split;
-  // form sends value for debtor and splitTx as one string. Use String split() method to grab each one.
+  // form sends value for debtor and splitTx as one string. Use String .split() method to grab each one.
   const debtor = debtorAndSplit.split(" ")[0]
   const isSplitTx = debtorAndSplit.split(" ")[1]
 
@@ -445,6 +450,7 @@ render() {
               absBalance = {this.absBalance}
               userPendingTxs = {this.userPendingTxs}
               confirmSingleTx = {this.confirmSingleTx}
+              deletePendingTx = {this.deletePendingTx}
               confirmAll = {this.confirmAll}
               current_user = {this.state.current_user}
               user_1 = {this.state.user_1}
