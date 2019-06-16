@@ -20,7 +20,6 @@ class SingleAgreement extends Component {
     user_2_name: null,
     current_user: null,
     invited_friend: null,
-    // arrays of 'Transaction' objects
     user1_pending_txs: [],
     user2_pending_txs: [],
     confirmed_txs: [],
@@ -31,12 +30,12 @@ class SingleAgreement extends Component {
 
   componentDidMount = async () => {
     try {
-      const agreementAddress = this.props.match.params.address;
+      const agreementAddress = this.props.match.params.address; // address is passed from Factory.js state --> Router --> SingleAgreement
       const web3 = await getWeb3(); // Get network provider and web3 instance.
       const accounts = await web3.eth.getAccounts();
-      const Contract = truffleContract(Agreement);   // Get the contract instance.
+      const Contract = truffleContract(Agreement);   // Get the contract representation, from the JSON artifact
       Contract.setProvider(web3.currentProvider);
-      const agreement = await Contract.at(agreementAddress);
+      const agreement = await Contract.at(agreementAddress); // Get the deployed contract instance.
 
       //Get the users and balance
       const current_user = accounts[0]
@@ -189,6 +188,7 @@ trimError = (error) => {
 validateAmount = (num) => {
  // check num is a positive monetary number, up to 2 decimal places
  if (!(/^\d+(\.\d{1,2})?$/.test(num))) {
+  window.Materialize.toast('Please enter a valid, positive amount', 5000)
   return false
  }
  return true
@@ -201,11 +201,8 @@ createPending = async (e) => {
   const amount = e.target.amount.value;
  
   // check for a valid amount before proceeding
-  if (!this.validateAmount(amount)) {
-    window.Materialize.toast('Please enter a valid, positive amount', 5000)
-    return null
-  }  
-
+  if (!this.validateAmount(amount)) return null
+   
   const debtorAndSplit = e.target.debtorAndSplit.value;
   const description = e.target.description.value;
   let split;

@@ -21,27 +21,21 @@ class Factory extends Component {
   componentDidMount = async () => {
     try {
       const web3 = await getWeb3(); // Get network provider and web3 instance.
-      console.log("web3 is:")
-      console.log(web3)
+    
       const accounts = await web3.eth.getAccounts();
       const currentAccount = accounts[0];
-      console.log("accounts[0] is:")
-      console.log(accounts[0])
-      const Contract = truffleContract(AgreementFactory);   // Get the contract instance.
+      
+      const Contract = truffleContract(AgreementFactory);    // Get the contract representation, from the JSON artifact
       Contract.setProvider(web3.currentProvider);
-      const factory = await Contract.deployed();
+      const factory = await Contract.deployed(); // Get the deployed contract instance.
       this.logState();
       const myInvites = await factory.getMyInvites({from: accounts[0]});
       const myAgreements = await factory.getMyAgreements({from: accounts[0]});
-      console.log("myAgreements are:")
-      console.log(myAgreements)
-      console.log("myInvites are:")
-      console.log(myInvites)
+      
       const myAgreementsData = await this.getAllAgreementsData(web3, myAgreements, {from: accounts[0]});
       const myInvitesData = await this.getAllAgreementsData(web3, myInvites, {from: accounts[0]});
-      console.log("myAgreementsData before set as State is:")
-      console.log(myAgreementsData)
-     this.setState({ web3, accounts, currentAccount, factory, myInvites, myAgreements, myAgreementsData, myInvitesData }, this.logState)
+      
+      this.setState({ web3, accounts, currentAccount, factory, myInvites, myAgreements, myAgreementsData, myInvitesData }, this.logState)
     } catch (error) {
       // Catch any errors for above operations
         window.Materialize.toast(

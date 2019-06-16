@@ -52,7 +52,7 @@ class AgreementBody extends Component {
         {/*List current user's Pending Txs*/}
         <div className="row">
           <div className=" col s6">
-            <h4>My Pending Tx</h4>
+            <h4>My Pending Transactions</h4>
             { userPendingTxs().length > 0 ?
               <div className="input-field">
                 <button className="btn waves-effect waves-light" onClick={confirmAll}>Confirm All</button>
@@ -71,7 +71,7 @@ class AgreementBody extends Component {
             />
             </div>
             <div className="col s6">
-              <h4>Their Pending Tx</h4>
+              <h4>Their Pending Transactions</h4>
               <br/>
               <br/>
               <br/>
