@@ -4,6 +4,7 @@ import AgreementFactory from "../contracts/AgreementFactory.json";
 import getWeb3 from "../utils/getWeb3";
 import truffleContract from "truffle-contract";
 import ESNavbar from './ESNavbar.js';
+import { getBalanceTraits, absBalance } from '../helpers.js';
 
 class Factory extends Component {
 
@@ -24,16 +25,17 @@ class Factory extends Component {
     
       const accounts = await web3.eth.getAccounts();
       const currentAccount = accounts[0];
+      this.setState({currentAccount})
       
       const Contract = truffleContract(AgreementFactory);    // Get the contract representation, from the JSON artifact
       Contract.setProvider(web3.currentProvider);
       const factory = await Contract.deployed(); // Get the deployed contract instance.
       this.logState();
       const myInvites = await factory.getMyInvites({from: accounts[0]});
-      const myAgreements = await factory.getMyAgreements({from: accounts[0]});
+      const myAgreements = await factory.getMyAgreements({from: accounts[0]});  // get addresses of user's agreements
       
-      const myAgreementsData = await this.getAllAgreementsData(web3, myAgreements, {from: accounts[0]});
-      const myInvitesData = await this.getAllAgreementsData(web3, myInvites, {from: accounts[0]});
+      const myAgreementsData = await this.getAllMyAgreementsData(web3, myAgreements, {from: accounts[0]});
+      const myInvitesData = await this.getAllMyAgreementsData(web3, myInvites, {from: accounts[0]});
       
       this.setState({ web3, accounts, currentAccount, factory, myInvites, myAgreements, myAgreementsData, myInvitesData }, this.logState)
     } catch (error) {
@@ -46,24 +48,24 @@ class Factory extends Component {
   };
 
   getAgreementData = async (web3, address) => {
-    // returns balance and usernames for the input contract
     const AgreementInstance = truffleContract(Agreement);
     AgreementInstance.setProvider(web3.currentProvider);
     const agreement = await AgreementInstance.at(address);
     const user_1_name = await agreement.user_1_name();
     const user_2_name = await agreement.user_2_name();
-    const balance = (await agreement.balance()).toNumber();
+    const balance = (await agreement.balance()).toNumber() / 100.0;
     const creator = await agreement.user_1();
-    // console.log("address is: "+address+". bal, u1name, u2 name and creator are")
-    // console.log(balance, user_1_name, user_2_name, creator)
-    return [balance, user_1_name, user_2_name, creator]
+    const user_2 = await agreement.user_2();
+    const balanceTraits = getBalanceTraits(this.state.currentAccount, balance, creator, user_2)
+
+    return {balance, user_1_name, user_2_name, creator, balanceTraits}
   }
 
-  getAllAgreementsData = async (web3, agreements) => {
+  getAllMyAgreementsData = async (web3, agreements) => {
     const allAgreementsData = {};
     for (const addr of agreements) {
       const data = await this.getAgreementData(web3, addr);  //get data from each individual agreement
-      allAgreementsData[addr] = { "balance": data[0], "user_1_name": data[1], "user_2_name": data[2], "creator": data[3]  }
+      allAgreementsData[addr] = data;
     }
     return allAgreementsData;
   }
@@ -86,7 +88,6 @@ class Factory extends Component {
     const path = '/agreements/' + addr;
     console.log('path from routeChange func is: ')
     console.log(path)
-    //this.setState({agreementToLoad: addr})
     this.props.history.push(path);
   }
 
@@ -120,18 +121,21 @@ class Factory extends Component {
     const myAgreementsData = this.state.myAgreementsData;
     const MyAgreements = []
     for (const addr in myAgreementsData) {
-      const creator = this.state.myAgreementsData[addr]["creator"]
-      const user_1_name = this.state.myAgreementsData[addr]["user_1_name"]
+      const creator = myAgreementsData[addr]["creator"]
+      const user_1_name = myAgreementsData[addr]["user_1_name"]
+      const balance = myAgreementsData[addr]["balance"]
+      const balanceTraits = myAgreementsData[addr]["balanceTraits"]
 
       MyAgreements.push(
       <div className="card" key={addr}>
         <div className="row factory-agreement-top">
           <div className ="col s7 truncate">
-            <p>Agreement contract address:</p>
+            <p>Agreement Contract Address:</p>
             <p>{addr}</p>
           </div>
-          <div className ="col s3">
-            <h5 className ="truncate">Balance: {myAgreementsData[addr]["balance"]}</h5>
+          <div className ="col s5">
+            <h5 className ="truncate">Balance: <span className={balanceTraits.color}>{balanceTraits.sign}£{absBalance(balance)}</span></h5>
+            {/* <h3 className ="hide-on-small-only">Balance: <span className={balanceTraits.color}>{balanceTraits.sign}£{absBalance(balance)}</span></h3> */}
           </div>
 
         </div>
@@ -154,8 +158,7 @@ class Factory extends Component {
       const creator = this.state.myInvitesData[addr]["creator"]
       const user_1_name = this.state.myInvitesData[addr]["user_1_name"]
 
-      // If agreement already in myAgreements -
-      // if user has already registered - don't render it in the invites list.
+      // If agreement already in myAgreements - don't render it in the invites list.
       if (this.state.myAgreementsData[addr]) {
         continue;
       }

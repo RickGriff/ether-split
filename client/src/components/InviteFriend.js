@@ -12,7 +12,7 @@ function InviteFriend(props) {
         </div>
         <div className="input-field inline col s6">
           <label htmlFor="name"></label>
-          <input id="invited-friend" type="text" name="address" className="validate" />
+          <input id="invited-friend" type="text" placeholder="Paste your friend's address" name="address" className="validate" />
         </div>
       </div>
     </form>

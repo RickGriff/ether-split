@@ -86,12 +86,13 @@ contract Agreement {
   string public user_1_name;
   string public user_2_name;
 
-  /// The net balance of who owes who.  Positive if user_2 owes more, negative if user_1 owes more.
-  int public balance;
+  /* The net balance of who owes who, in pennies. 
+  Positive if user_2 owes more, negative if user_1 owes more. */
+  int public balance;  
 
-  uint public txCounter = 0; /// counts the number of transactions created.
+  uint public txCounter = 0; 
 
-  mapping (uint => Tx) public pendingTxs1; /// Txs pending confirmation from user_1
+  mapping (uint => Tx) public pendingTxs1; /// Transactions pending confirmation from user_1
   uint[] public pendingTxsList1; /// unordered list of user_1's pending Tx IDs
 
   mapping (uint => Tx) public pendingTxs2; 
@@ -100,7 +101,7 @@ contract Agreement {
   mapping (uint => Tx) public confirmedTxs;
   uint[] public confirmedTxsList;
 
-  /// basic transaction object.
+  /// Basic transaction object
   struct Tx {
     uint amount;
     bool split;

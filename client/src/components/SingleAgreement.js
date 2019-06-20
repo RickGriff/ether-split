@@ -1,12 +1,13 @@
-import React, { Component } from "react";
-import Agreement from "../contracts/Agreement.json";
-import getWeb3 from "../utils/getWeb3";
-import truffleContract from "truffle-contract";
-import ESNavbar from './ESNavbar.js'
-import EnterName from './EnterName.js'
-import InviteFriend from './InviteFriend.js'
-import RegisterUser2 from './RegisterUser2.js'
-import AgreementBody from './AgreementBody.js'
+import React, { Component } from 'react';
+import Agreement from '../contracts/Agreement.json';
+import getWeb3 from '../utils/getWeb3';
+import truffleContract from 'truffle-contract';
+import ESNavbar from './ESNavbar.js';
+import EnterName from './EnterName.js';
+import InviteFriend from './InviteFriend.js';
+import RegisterUser2 from './RegisterUser2.js';
+import AgreementBody from './AgreementBody.js';
+import { getBalanceTraits, absBalance } from '../helpers.js';
 
 class SingleAgreement extends Component {
 
@@ -25,13 +26,14 @@ class SingleAgreement extends Component {
     confirmed_txs: [],
     test_state: null,
     setName_clicks: 0,
-    inviteFriend_clicks: 0
+    inviteFriend_clicks: 0,
+    balance_traits: null
   };
 
   componentDidMount = async () => {
     try {
-      const agreementAddress = this.props.match.params.address; // address is passed from Factory.js state --> Router --> SingleAgreement
-      const web3 = await getWeb3(); // Get network provider and web3 instance.
+      const agreementAddress = this.props.match.params.address;  // address is passed from Factory.js state --> Router --> SingleAgreement
+      const web3 = await getWeb3();  // Get network provider and web3 instance.
       const accounts = await web3.eth.getAccounts();
       const Contract = truffleContract(Agreement);   // Get the contract representation, from the JSON artifact
       Contract.setProvider(web3.currentProvider);
@@ -44,15 +46,18 @@ class SingleAgreement extends Component {
       const user_1_name = await agreement.user_1_name({ from: accounts[0] });
       const user_2_name = await agreement.user_2_name({ from: accounts[0] });
       const invited_friend = await agreement.invited_friend({ from: accounts[0] });
-      const balance = (await agreement.balance( { from: accounts[0] })).toNumber();
-      //Get pending transactions
+      const balance = await this.getBalance(agreement);
+
+      const balanceTraits = getBalanceTraits(current_user, balance, user_1, user_2);
+      
+      //Get pending and confirmed transactions
       const all_pending_txs = await this.getAllPendingTxs(agreement, accounts[0])
       const user1_pending_txs = all_pending_txs[0]
       const user2_pending_txs = all_pending_txs[1]
       const confirmed_txs = await this.getConfirmedTxs(agreement, accounts[0]);
 
       // Set web3, accounts contract, users and transactions to the state.
-      this.setState({ web3, accounts, current_user, user_1, user_2, user_1_name, user_2_name, invited_friend, user1_pending_txs, user2_pending_txs, confirmed_txs, balance,  contract: agreement}, this.logState);
+      this.setState({ web3, accounts, current_user, user_1, user_2, user_1_name, user_2_name, invited_friend, user1_pending_txs, user2_pending_txs, confirmed_txs, balance, balanceTraits, contract: agreement}, this.logState);
 
     } catch (error) {
       // Catch any errors for above operations
@@ -73,7 +78,7 @@ inviteFriend = async (e) => {
   if (clicks === 0) {
     clicks += 1;
     window.Materialize.toast(
-    "Please check your friend's address is correct! Mistakes can not be reversed. Please click Invite again to set it.", 7000)
+    "Please check your friend's address is correct! Mistakes can not be reversed. Please click 'Invite' again to set it.", 7000)
     this.setState({inviteFriend_clicks: clicks}, this.logState);
   } else if (clicks > 0) {
     clicks += 1;
@@ -158,96 +163,64 @@ getConfirmedTxs = async (contract, fromAddress) => {
   return txList;
 }
 
-cleanTx = (tx) => {
-  // return a clean representation of a transaction, for use in React state
-  const {amount, split, creator, confirmer, debtor, description, id, timestamp, index } = tx;
-
-  const clean_tx = {
-    amount: amount.toNumber(),
-    split: split.toString(),
-    creator: creator,
-    confirmer: confirmer,
-    debtor: debtor,
-    description: description,
-    id: id.toNumber(),
-    timestamp: timestamp.toNumber(),
-    contract_index: index.toNumber()
-  }
-  return clean_tx
-}
-
-trimError = (error) => {
-  if (error.message.includes('Invalid "from" address')) {
-    return  'Invalid "From" address. You may only create transactions from an address registered on this agreement.'
-  } else {
-    return error.message
-  }
-}
-
-
-validateAmount = (num) => {
- // check num is a positive monetary number, up to 2 decimal places
- if (!(/^\d+(\.\d{1,2})?$/.test(num))) {
-  window.Materialize.toast('Please enter a valid, positive amount', 5000)
-  return false
- }
- return true
-}
-
-
 createPending = async (e) => {
   e.preventDefault();
-  const { accounts, contract } = this.state;
-  const amount = e.target.amount.value;
- 
-  // check for a valid amount before proceeding
-  if (!this.validateAmount(amount)) return null
-   
-  const debtorAndSplit = e.target.debtorAndSplit.value;
+
   const description = e.target.description.value;
+  const debtorAndSplit = e.target.debtorAndSplit.value;
+  // grab debtor and split from the single string sent by form 
   let split;
-  // form sends value for debtor and splitTx as one string. Use String .split() method to grab each one.
   const debtor = debtorAndSplit.split(" ")[0]
   const isSplitTx = debtorAndSplit.split(" ")[1]
-
   split = ( isSplitTx === "splitTx" ? true : false )
 
-  if (!(amount && description)) {
+  const amount = e.target.amount.value;
+  if (!this.validateAmount(amount)) return null; // proceed if amount is valid 
+
+  const amountPennies = Number(amount) * 100;
+
+  if (!(amountPennies && description)) {
       window.Materialize.toast('Please enter an amount and description!', 5000)
       return null
     }
 
+  await this.tryCallCreatePending(amountPennies, split, debtor, description)
+  await this.updatePendingTxsState()
+
+  window.Materialize.toast('Pending Transaction created.', 4000)
+}
+
+tryCallCreatePending = async (amountPennies, split, debtor, description) => {
+  const { accounts, contract } = this.state;
   try {
-    await contract.createPending(amount, split, debtor, description, {from: accounts[0]})
+    await contract.createPending(amountPennies, split, debtor, description, {from: accounts[0]})
   }
   catch(error) { // return the error message
     window.Materialize.toast(this.trimError(error), 8000)
     return null
   }
+}
 
+updatePendingTxsState = async (contract) => {
   const updatedPending = await this.getAllPendingTxs(contract)
   await this.setState({user1_pending_txs: updatedPending[0], user2_pending_txs: updatedPending[1] });
-  window.Materialize.toast('Pending Transaction created.', 4000)
-}
+ }
 
-getName = (address) => {
-  const {user_1, user_2 } = this.state;
-  let name;
-  if (address === user_1) {
-    name = (this.state.user_1_name || "User 1")
-  } else if ( address === user_2 ) {
-    name = (this.state.user_2_name || "User 2" )
+validateAmount = (num) => {
+  // check num is a positive monetary number, up to 2 decimal places
+  if (!(/^\d+(\.\d{1,2})?$/.test(num))) {
+   window.Materialize.toast('Please enter a valid, positive amount', 5000)
+   return false
   }
-  return name
-}
+  return true
+ }
 
-isEmptyAddress = (address) => {
-  return address === "0x0000000000000000000000000000000000000000";
-}
-
-logState = () => {
-  console.log("The state is:")
-  console.log(this.state)
+ trimError = (error) => {
+  if (error.message.includes('Invalid "from" address')) {
+    return  'Invalid "From" address. You may only create transactions from an address registered on this agreement.'
+  } else {
+    return error.message
+  }
 }
 
 setName = async (e) => {
@@ -276,8 +249,21 @@ setName = async (e) => {
   }
 }
 
+getBalance = async (agreement) => {
+  const balancePennies = await agreement.balance();
+  const balancePounds = balancePennies.toNumber() / 100.0
+  return balancePounds;
+}
+
+/*****  Helper Functions  *****/
+
+logState = () => {
+  console.log("The state is:")
+  console.log(this.state)
+}
+
+// return the sign and color for a tx, based on whether current_user is the debtor
 txTraits = (tx) => {
-  // return the sign and color for a tx, based on whether current_user is the debtor
   let sign = "";
   let color = "";
   if (this.state.current_user === tx.debtor) {
@@ -287,35 +273,37 @@ txTraits = (tx) => {
   return { color, sign }
 }
 
-userBal = () => {
-  //return properties of the balance for the current_user's point of view: it's color, prefix and sign +ve or -ve.
-  const { current_user, balance, user_1, user_2 } = this.state;
-  let color;
-  let prefix =  '';
-  let sign = '';
-
-  if (balance === 0) {
-    color = 'black-text'
-  } else if (current_user === user_1 && balance < 0) {
-    color = 'red-text accent-4'
-    prefix = 'You Owe'
-    sign = '-'
-  } else if (current_user === user_1 && balance >= 0) {
-    color = 'teal-text text-lighten-1'
-    prefix = 'You Are Owed'
-  } else if (current_user === user_2 && balance < 0) {
-    color = 'teal-text text-lighten-1'
-    prefix = 'You Are Owed'
-  } else if (current_user === user_2 && balance >= 0) {
-    color = 'red-text text-accent-4'
-    prefix = 'You Owe'
-    sign = '-'
+// return a clean representation of a transaction, for use in React state
+cleanTx = (tx) => {
+  const {amount, split, creator, confirmer, debtor, description, id, timestamp, index } = tx;
+  const amountPounds = (Number(amount) / 100.0).toFixed(2)
+  
+  const clean_tx = {
+    amount: amountPounds,   // convert pennies to pounds
+    split: split.toString(),
+    creator: creator,
+    confirmer: confirmer,
+    debtor: debtor,
+    description: description,
+    id: id.toNumber(),
+    timestamp: timestamp.toNumber(),
+    contract_index: index.toNumber()
   }
-  return  { color, prefix, sign };
+  return clean_tx
 }
 
+getName = (address) => {
+  const {user_1, user_2 } = this.state;
+  let name;
+  if (address === user_1) {
+    name = (this.state.user_1_name || "User 1")
+  } else if ( address === user_2 ) {
+    name = (this.state.user_2_name || "User 2" )
+  }
+  return name
+}
+//returns the current user's pending transactions
 userPendingTxs = () => {
-  //returns the current user's pending transactions
   const { current_user, user_1, user_2, user1_pending_txs, user2_pending_txs } = this.state;
 
   if (current_user === user_1) {
@@ -325,13 +313,13 @@ userPendingTxs = () => {
   }
 }
 
-absBalance = () => {
-  return Math.abs(this.state.balance)
-}
-
 accountRegistered = () => {
   const { current_user, user_1, user_2 } = this.state;
   return current_user === user_1 || current_user === user_2;
+}
+
+isEmptyAddress = (address) => {
+  return address === "0x0000000000000000000000000000000000000000";
 }
 
 isUser1 = () => {
@@ -377,16 +365,16 @@ render() {
 
   if (!this.accountRegistered() && !this.isInvitedFriend()) {
     return <div className="container">
-      <h4>Sorry, your Eth account address has not been registered on or invited to this agreement yet.</h4>
+      <h4>Sorry, your Ethereum account address has not been registered on or invited to this agreement yet.</h4>
     </div>
   }
 
   return (
     <div className="Agreement">
       <ESNavbar userName={this.getName(this.state.current_user)}
-        sign={this.userBal().sign}
+        sign={this.state.balanceTraits.sign}
         accountRegistered={this.accountRegistered}
-        balance={this.absBalance()}
+        balance={absBalance(this.state.balance)}
         singleAgreement = {true}
         currentAccount = {this.current_user}/>
 
@@ -432,7 +420,7 @@ render() {
                /> : null
           }
             <div>
-            <div className={this.isUser1() && this.hasInvitedFriend() ? null : "hidden" }>
+            <div className={this.isUser1() && this.hasInvitedFriend() && !this.hasTwoUsers() ? null : "hidden" }>
               <h3> Awaiting registration from the invited address. </h3>
             </div>
           {/* Render SingleAgreementBody if account is registered for this agreement */}
@@ -442,9 +430,10 @@ render() {
               hasTwoUsers = {this.hasTwoUsers}
               createPending = {this.createPending}
               getName = {this.getName}
-              userBal = {this.userBal}
+              balance = {this.state.balance}
+              balanceTraits = {this.state.balanceTraits}
               txTraits = {this.txTraits}
-              absBalance = {this.absBalance}
+              absBalance = {absBalance}
               userPendingTxs = {this.userPendingTxs}
               confirmSingleTx = {this.confirmSingleTx}
               deletePendingTx = {this.deletePendingTx}

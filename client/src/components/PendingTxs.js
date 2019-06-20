@@ -19,8 +19,7 @@ function PendingTxs(props) {
 
   let pending_txs; // txs to be rendered
 
-  // Grab the correct pending txs. Set according to the current_user,
-  // & whether to shows theirs or other user's.
+  // Grab the correct pending txs for the current_user and context 
   if (current_user === user_1  && showMine === true) {
     pending_txs = user1_pending_txs
   } else if (current_user === user_2 && showMine === true) {
@@ -48,7 +47,6 @@ function PendingTxs(props) {
           </span>
         </div>
         <div className = "collapsible-body">
-          <div>#{tx.list_id} </div>
           <div> { getName(tx.debtor) } owes £{ tx.amount } </div>
           <div> For: { tx.description } </div>
           <div> Debt added by { getName(tx.creator) } </div>
@@ -66,7 +64,6 @@ function PendingTxs(props) {
           </div>
         </div>
       </li>
-
     )
   });
 

@@ -21,7 +21,6 @@ function ConfirmedTxs(props) {
           </span>
         </div>
         <div className = "collapsible-body">
-          <div>#{tx.id} </div>
           <div> { getName(tx.debtor) } owes £{ tx.amount } </div>
           <div> For: { tx.description } </div>
           <div> Debt added by { getName(tx.creator) } </div>

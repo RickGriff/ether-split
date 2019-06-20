@@ -9,17 +9,15 @@ class AgreementBody extends Component {
   render () {
 
   const {
-    accountRegistered,
     hasTwoUsers,
     createPending,
     getName,
-    userBal,
+    balance,
+    balanceTraits,
     txTraits,
     current_user,
     user_1,
     user_2,
-    user_1_name,
-    user_2_name,
     absBalance,
     userPendingTxs,
     user1_pending_txs,
@@ -46,7 +44,7 @@ class AgreementBody extends Component {
             </Collapsible>
           </div>
           <div className=" col s5">
-            <h3 className ="hide-on-small-only">Balance: <span className={userBal().color}>{userBal().sign}£{absBalance()}</span></h3>
+            <h3 className ="hide-on-small-only">Balance: <span className={balanceTraits.color}>{balanceTraits.sign}£{absBalance(balance)}</span></h3>
           </div>
         </div>
         {/*List current user's Pending Txs*/}
