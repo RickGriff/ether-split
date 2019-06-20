@@ -11,11 +11,12 @@
     "openzeppelin-solidity": "^2.1.2",
     "react-materialize": "^2.5.0",
     "react-moment": "^0.8.4",
-    "truffle-assertions": "^0.7.1",
     "truffle-core": "^4.1.14",
     "truffle-hdwallet-provider": "^1.0.10"
   },
-  "devDependencies": {},
+  "devDependencies": {
+    "truffle-assertions": "^0.7.1"
+  },
   "scripts": {
     "test": "mocha"
   },
