@@ -1,0 +1,42 @@
+Integration test
+
+Account 2 creates ( deployed w/ truffle) Factory
+
+Account 3 Creates 2 contracts, C1 C2 DONE
+Account 3 invites A4 to C1 DONE
+A4 registers on C1 DONE
+
+A3 can create 3Txs on C1 DONE
+A4 can create 3Txs on C1 DONE
+
+A3 can confirmTx on C1 
+A4 can confirm Tx on C1 
+
+A3 can confirmAll on C1 DONE
+A4 can confirmAll on C1 DONE
+
+A2 can't view C1 DONE
+
+A2 creates contract C3 invites A3
+A2 creates contract C4 invites A4
+
+Lists:
+
+A2:
+In C3, C4
+
+A3:
+In C1, C2
+Invited to C3 DONE
+
+A4:
+In: C1
+Invited to C4 DONE
+
+
+DONE
+
+
+
+
+

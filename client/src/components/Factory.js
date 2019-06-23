@@ -79,7 +79,7 @@ class Factory extends Component {
     const {currentAccount, factory, web3 } = this.state;
     await factory.createNewAgreement({from: currentAccount});
     const updatedMyAgreements = await factory.getMyAgreements({from: currentAccount});
-    const updatedAgreementsData = await this.getAllAgreementsData(web3, updatedMyAgreements);
+    const updatedAgreementsData = await this.getAllMyAgreementsData(web3, updatedMyAgreements);
     this.setState({ myAgreements: updatedMyAgreements, myAgreementsData: updatedAgreementsData }, this.logState)
     window.Materialize.toast('You have created a new agreement!', 8000)
   }
