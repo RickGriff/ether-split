@@ -4,7 +4,7 @@ import AgreementFactory from "../contracts/AgreementFactory.json";
 import getWeb3 from "../utils/getWeb3";
 import truffleContract from "truffle-contract";
 import ESNavbar from './ESNavbar.js';
-import { getBalanceTraits, absBalance } from '../helpers.js';
+import { getBalanceTraits, absBalance, showWaitingToast, removeWaitingToast } from '../helpers.js';
 
 class Factory extends Component {
 
@@ -20,32 +20,58 @@ class Factory extends Component {
   };
 
   componentDidMount = async () => {
-    try {
-      const web3 = await getWeb3(); // Get network provider and web3 instance.
-    
-      const accounts = await web3.eth.getAccounts();
-      const currentAccount = accounts[0];
-      this.setState({currentAccount})
-      
-      const Contract = truffleContract(AgreementFactory);    // Get the contract representation, from the JSON artifact
-      Contract.setProvider(web3.currentProvider);
-      const factory = await Contract.deployed(); // Get the deployed contract instance.
-      this.logState();
-      const myInvites = await factory.getMyInvites({from: accounts[0]});
-      const myAgreements = await factory.getMyAgreements({from: accounts[0]});  // get addresses of user's agreements
-      
-      const myAgreementsData = await this.getAllMyAgreementsData(web3, myAgreements, {from: accounts[0]});
-      const myInvitesData = await this.getAllMyAgreementsData(web3, myInvites, {from: accounts[0]});
-      
-      this.setState({ web3, accounts, currentAccount, factory, myInvites, myAgreements, myAgreementsData, myInvitesData }, this.logState)
-    } catch (error) {
-      // Catch any errors for above operations
-        window.Materialize.toast(
-        `Failed to load web3, accounts, contract, users, or transactions -- check console for details. Please make sure your MetaMask or chosen
-        digital Ether wallet is enabled.`, 6000);
-      console.log(error);
+    let attempts = 0;
+    const maxAttempts = 2
+    while (true) {
+      try {
+
+        this.getAllInitialData();
+        break;
+
+      } catch (error) {
+        attempts += 1
+        if (attempts < maxAttempts) {
+          console.log(error)
+          console.log("Re-trying componentDidMount ...")
+          continue;
+        } else {
+          window.Materialize.toast(
+          `Failed to load web3, accounts, contract, users, or transactions -- check console for details. Please make sure your MetaMask or chosen
+          digital Ether wallet is enabled.`, 6000);
+          console.log(error);
+          break;
+        }
+      }
     }
   };
+
+  getAllInitialData = async () => {
+    const web3 = await getWeb3(); // Get network provider and web3 instance.
+    
+    const accounts = await web3.eth.getAccounts();
+    const currentAccount = accounts[0];
+    this.setState({currentAccount})
+    
+    const Contract = truffleContract(AgreementFactory);    // Get the contract representation, from the JSON artifact
+    Contract.setProvider(web3.currentProvider);
+    const factory = await Contract.deployed(); // Get the deployed contract instance.
+    const myInvites = await factory.getMyInvites({from: accounts[0]});
+    const myAgreements = await factory.getMyAgreements({from: accounts[0]});  // get addresses of user's agreements
+    
+    const myAgreementsData = await this.getAllMyAgreementsData(web3, myAgreements, {from: accounts[0]});
+    const myInvitesData = await this.getAllMyAgreementsData(web3, myInvites, {from: accounts[0]});
+    
+    this.setState({ web3, accounts, currentAccount, factory, myInvites, myAgreements, myAgreementsData, myInvitesData }, this.logState)
+  }
+
+  getAllMyAgreementsData = async (web3, agreements) => {
+    const allAgreementsData = {};
+    for (const addr of agreements) {
+      const data = await this.getAgreementData(web3, addr);  //get data from each individual agreement
+      allAgreementsData[addr] = data;
+    }
+    return allAgreementsData;
+  }
 
   getAgreementData = async (web3, address) => {
     const AgreementInstance = truffleContract(Agreement);
@@ -61,15 +87,6 @@ class Factory extends Component {
     return {balance, user_1_name, user_2_name, creator, balanceTraits}
   }
 
-  getAllMyAgreementsData = async (web3, agreements) => {
-    const allAgreementsData = {};
-    for (const addr of agreements) {
-      const data = await this.getAgreementData(web3, addr);  //get data from each individual agreement
-      allAgreementsData[addr] = data;
-    }
-    return allAgreementsData;
-  }
-
   logState = () => {
     console.log("The state is:")
     console.log(this.state)
@@ -77,9 +94,11 @@ class Factory extends Component {
 
   createNewAgreement = async () => {
     const {currentAccount, factory, web3 } = this.state;
+    showWaitingToast();
     await factory.createNewAgreement({from: currentAccount});
     const updatedMyAgreements = await factory.getMyAgreements({from: currentAccount});
     const updatedAgreementsData = await this.getAllMyAgreementsData(web3, updatedMyAgreements);
+    removeWaitingToast();
     this.setState({ myAgreements: updatedMyAgreements, myAgreementsData: updatedAgreementsData }, this.logState)
     window.Materialize.toast('You have created a new agreement!', 8000)
   }

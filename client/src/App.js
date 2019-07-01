@@ -6,6 +6,11 @@ import SingleAgreement from "./components/SingleAgreement.js"
 import "./App.css";
 
 class App extends Component {
+  constructor() {
+    super();
+    this.M = window.M; /*"window.M" will make sure that you have access to the M included in the earlier materialize cdn script tag, so that you don't get errors like "M is undefined" */
+  }
+
   render() {
     return (
     <BrowserRouter>

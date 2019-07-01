@@ -25,7 +25,8 @@ class AgreementBody extends Component {
     confirmSingleTx,
     deletePendingTx,
     confirmAll,
-    confirmed_txs
+    confirmed_txs,
+    show_blockchain_preloader,
     } = this.props
 
     return (

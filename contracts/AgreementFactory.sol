@@ -114,7 +114,7 @@ contract Agreement {
     uint index;  
   }
 
-  ///  ****** constructor and user registration functions ******
+  ///  ****** Constructor and user registration functions ******
   constructor(address _creator) public {
     parentFactory = msg.sender;
     AgreementFactory factory = AgreementFactory(parentFactory);
@@ -125,7 +125,6 @@ contract Agreement {
    event logNewPendingTx (uint id, uint listIndex, uint amount, address creator);
    event logDeletedTx (uint id, uint listIndex, uint amount, address creator);
 
-  /// Store the user's name
   function setName(string memory _name) onlyUser public {
     if (msg.sender == user_1) {
       require(bytes(user_1_name).length == 0, "You already set your name!");
