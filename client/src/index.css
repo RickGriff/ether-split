@@ -35,3 +35,28 @@ body {
 .hidden {
   display:none;
 }
+
+.agreement-balance {
+  margin-top: 0px;
+}
+
+.agreement-body {
+  margin-top: 20px;
+}
+
+.blank {
+  height: 37px;
+ }
+
+ .btn-confirm-all {
+   margin-left: 15px;
+ }
+
+ .pending-txs {
+    margin-top: 30px;
+ }
+
+ .pending-title {
+  height: 70px;
+ }
+ 

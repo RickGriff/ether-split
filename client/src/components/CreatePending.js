@@ -34,7 +34,7 @@ class CreatePending extends Component {
       <form onSubmit={this.handleSubmit}>
       <div className="row">
         <button className="btn waves-effect waves-light" type="submit">Create Pending TX</button>
-        <div className="col s4">
+        <div className="col s5">
           <label htmlFor="amount">
             <Input type='number' placeholder='Amount (£)' name='amount' value={this.state.amount_content} onChange={this.handleAmountChange} />
           </label>

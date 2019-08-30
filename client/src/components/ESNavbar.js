@@ -9,7 +9,7 @@ function ESNavbar(props) {
   if (singleAgreement && accountRegistered()) {
     navButtons =
     <div>
-      <li><a>User: {userName}</a></li>
+      <li><a>{userName? `User: ${userName}` : null }</a></li>
       <li><a>Balance: {sign} £{balance}</a></li>
       <li><a href ='/'>Back to My Agreements</a></li>
     </div>

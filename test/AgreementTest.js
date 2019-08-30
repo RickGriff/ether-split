@@ -58,20 +58,6 @@ contract("Agreement", accounts => {
         assert.include(err.message, 'revert');
       }
     });
-
-    /* redundant test, since invited_friend can't be changed:-
- 
-    it("does not allow more invites after 2 users are registered", async () => {
-      await agreement.registerUser2({from: secondAccount});
-      try {
-        await agreement.inviteFriend(thirdAccount, {from: firstAccount});
-        assert.fail();
-      } catch (err) {
-        assert.include(err.message, 'revert');
-      }
-    });
- 
-    */
   });
 
   describe("Sets user's name", function () {

@@ -26,7 +26,7 @@ function ConfirmedTxs(props) {
           <div> Debt added by { getName(tx.creator) } </div>
           <div> Confirmed by { getName(tx.confirmer) } </div>
           <div> Date created: <Moment unix>{tx.timestamp}</Moment> </div>
-          <div> Contract Transaction ID: { tx.id } </div>
+          <div> Contract transaction ID: { tx.id } </div>
           <br/>
         </div>
       </li>
@@ -37,6 +37,7 @@ function ConfirmedTxs(props) {
     <div className = "row">
     <h4>Confirmed Transactions</h4>
     <br/>
+    {confirmed_txs.length === 0 ? <div><em>There are no confirmed transactions yet! </em></div> : null}
     <Collapsible popout>
     { ConfirmedTxs }
     </Collapsible>

@@ -51,7 +51,7 @@ function PendingTxs(props) {
           <div> For: { tx.description } </div>
           <div> Debt added by { getName(tx.creator) } </div>
           <div> Date created: <Moment unix>{tx.timestamp}</Moment> </div>
-          <div> Contract Transaction ID: { tx.id } </div>
+          <div> Contract transaction ID: { tx.id } </div>
           <div className="row">
             { showMine ?
               <div className="input-field col s3">
