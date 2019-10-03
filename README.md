@@ -2,13 +2,13 @@
 
 # EtherSplit 
 
-EtherSplit is a dApp that records debts between acquaintances on the immutable Ethereum Blockchain.
+EtherSplit is a dApp that records debts between acquaintances on the immutable Ethereum blockchain.
 
 Conventional services such as Venmo or Splitwise are centralized - data is vulnerable to corruption, and dependent on that particular company staying in business.
 
 EtherSplit takes advantage of Ethereum’s immutable data storage. Agreements with friends persist forever, and the history of debts is ‘set in stone’.
 
-If an old friend owes you $100 on EtherSplit, you can be sure the debt and its impact on the balance will persist as long as the global Ethereum network does. This is arguably more likely than a single company surviving the long-term, or having no data loss.
+If an old friend owes you $100 on EtherSplit, you can be sure the debt and its impact on the balance will persist as long as the global Ethereum network does. This is arguably more likely than a single company surviving the long-term, or suffering no data loss.
 
 ## Project Structure
 
@@ -18,7 +18,7 @@ The front-end React app is located in the /client folder.
 
 ## Application Structure
 
-EtherSplit consists of a parent *agreementFactory* contract, from which users may deploy individual *Agreement* contracts. 
+EtherSplit consists of a parent *AgreementFactory* contract, from which users may deploy individual *Agreement* contracts. 
 
 The parent factory stores all Agreements it creates, along with their associated users and user invites. The child Agreement contracts automatically update the parent contract when a new user is invited or joins. 
 
@@ -26,7 +26,7 @@ The creator of an Agreement invites one externally owned account (EOA) to regist
 
 An EOA may be in multiple agreements with different counterparties.
 
-## Agreement.sol Contract Public Functions
+## *Agreement.sol* Contract Public Functions
 
 | Function                                            | Description                                                                                               |
 |-----------------------------------------------------|-----------------------------------------------------------------------------------------------------------|
@@ -45,7 +45,7 @@ An EOA may be in multiple agreements with different counterparties.
 
 Users interact with their Agreements through Metamask and the EtherSplit UI - currently a web3/React web app. 
 
-Using EtherSplit on the Ropsten Testnet
+### Using EtherSplit on the Ropsten Testnet
 
 EtherSplit is live on the Ropsten network. You can create agreements, join them and record debts through the UI.
 
@@ -104,7 +104,7 @@ All contract functions can be called via the Truffle console in the usual way:
 let factoryInstance = await AgreementFactory.deployed()
 ```
 
- **Create a new agreement:**
+ **Create a new Agreement:**
 
 ```
 let tx = await Agreement.createNewAgreement() 
