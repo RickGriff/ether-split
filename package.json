@@ -7,7 +7,7 @@
     "test": "test"
   },
   "dependencies": {
-    "moment": "^2.22.2",
+    "moment": "^2.29.2",
     "openzeppelin-solidity": "^2.1.2",
     "react-materialize": "^2.5.0",
     "react-moment": "^0.8.4",
